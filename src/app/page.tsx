@@ -139,7 +139,12 @@ export default function Home() {
       }
     } catch (err: unknown) {
       console.error('Error al guardar en Neon:', err);
-      alert(`⚠️ Error al guardar: ${err instanceof Error ? err.message : 'Error inesperado al conectar con Neon PostgreSQL'}`);
+      const msg = err instanceof Error ? err.message : '';
+      if (msg.includes('not a function') || msg.includes('Server Components render') || msg.includes('500')) {
+        alert('⚠️ Se ha actualizado una nueva versión en Vercel. Por favor presiona F5 o recarga la página (Ctrl + Shift + R) para sincronizar con la última versión.');
+      } else {
+        alert(`⚠️ Error al guardar: ${msg || 'Error inesperado al conectar con Neon PostgreSQL'}`);
+      }
     } finally {
       setIsSaving(false);
     }
