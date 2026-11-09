@@ -1,4 +1,6 @@
 // src/services/pricing-engine.ts
+import { classifySunatTariff } from '@/utils/sunat-tariffs';
+
 export type CalculationOrigin = 'IMPORTACION' | 'NACIONAL';
 export type ProrationType = 'BY_VALUE' | 'BY_UNIT';
 export type MarginType = 'MARKUP' | 'GROSS_MARGIN';
@@ -10,6 +12,7 @@ export interface RawItemInput {
   quantity: number;
   baseUnitCostUsd: number;
   adValoremRate: number; // 0, 6 o 11
+  hsCode?: string;       // Subpartida Nacional SUNAT (ej: 8537.10.90.00)
   marginRatePct: number; // Ej: 45 para 45%
 }
 
@@ -29,6 +32,7 @@ export interface CalculatedItem {
   description: string;
   quantity: number;
   baseUnitCostUsd: number;
+  hsCode: string; // Subpartida Nacional SUNAT
   proratedFreightUnitUsd: number;
   estimatedInsuranceUnitUsd: number;
   cifUnitUsd: number;
@@ -86,6 +90,10 @@ export function calculateQuote(
     const qty = Math.max(1, item.quantity || 1);
     const itemTotalBase = (item.baseUnitCostUsd || 0) * qty;
 
+    const tariff = classifySunatTariff(item.partNumber, item.description);
+    const effectiveHsCode = item.hsCode || tariff.hsCode;
+    const effectiveAdValorem = typeof item.adValoremRate === 'number' ? item.adValoremRate : tariff.adValoremRate;
+
     let prorationFactor = 0;
     if (params.prorationMethod === 'BY_VALUE') {
       prorationFactor = totalBaseAmount > 0 ? itemTotalBase / totalBaseAmount : 0;
@@ -109,7 +117,7 @@ export function calculateQuote(
       const cfrUnit = (item.baseUnitCostUsd || 0) + freightUnit;
       insuranceUnit = cfrUnit * SUNAT_INSURANCE_RATE;
       cifUnit = cfrUnit + insuranceUnit;
-      adValoremUnit = cifUnit * ((item.adValoremRate || 0) / 100);
+      adValoremUnit = cifUnit * ((effectiveAdValorem || 0) / 100);
 
       const baseIgvAduana = cifUnit + adValoremUnit;
       igvAduaneroUnit = baseIgvAduana * IGV_RATE;
@@ -147,6 +155,7 @@ export function calculateQuote(
       description: item.description || '',
       quantity: qty,
       baseUnitCostUsd: Number((item.baseUnitCostUsd || 0).toFixed(4)),
+      hsCode: effectiveHsCode,
       proratedFreightUnitUsd: Number(freightUnit.toFixed(4)),
       estimatedInsuranceUnitUsd: Number(insuranceUnit.toFixed(4)),
       cifUnitUsd: Number(cifUnit.toFixed(4)),

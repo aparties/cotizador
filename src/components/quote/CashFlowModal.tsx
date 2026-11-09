@@ -58,7 +58,12 @@ export function CashFlowModal({ isOpen, onClose, summary, exchangeRatePen }: Pro
 
           <div className="flex justify-between items-center py-1.5 px-3 rounded-xl bg-[#081a14]/60">
             <span className="text-[#a8b5b0]">Arancel Ad Valorem (No Deducible - Costo):</span>
-            <span className="font-mono font-bold text-white">${totalAdValoremUsd.toFixed(2)}</span>
+            <div className="text-right">
+              <span className="font-mono font-bold text-white">${totalAdValoremUsd.toFixed(2)}</span>
+              {totalAdValoremUsd === 0 && (
+                <span className="ml-2 text-[10px] text-[#57cc99] font-mono">0% (Bienes de Capital / TLC)</span>
+              )}
+            </div>
           </div>
 
           <div className="flex justify-between items-center py-1.5 px-3 rounded-xl bg-amber-500/10 border border-amber-500/20">

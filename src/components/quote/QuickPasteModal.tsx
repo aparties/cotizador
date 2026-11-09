@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { parseQuickInput } from '@/utils/quote-parser';
 import { RawItemInput } from '@/services/pricing-engine';
 import { batchResolveDescriptions } from '@/services/quote-actions';
+import { classifySunatTariff } from '@/utils/sunat-tariffs';
 import { Clipboard, Loader2, Sparkles, X, Globe2 } from 'lucide-react';
 
 type Props = {
@@ -52,13 +53,16 @@ export function QuickPasteModal({ isOpen, onClose, onItemsParsed }: Props) {
           finalDescription = `REPUESTO INDUSTRIAL MOD. ${p.partNumber}`;
         }
 
+        const tariff = classifySunatTariff(p.partNumber, finalDescription);
+
         return {
           id: p.id,
           partNumber: p.partNumber,
           description: finalDescription,
           quantity: p.quantity,
           baseUnitCostUsd: p.cost,
-          adValoremRate: 0,
+          adValoremRate: tariff.adValoremRate,
+          hsCode: tariff.hsCode,
           marginRatePct: 45,
         };
       });
@@ -69,15 +73,20 @@ export function QuickPasteModal({ isOpen, onClose, onItemsParsed }: Props) {
     } catch (err) {
       console.error('Error resolving descriptions:', err);
       // Fallback in case of server action error
-      const formatted: RawItemInput[] = parsed.map((p) => ({
-        id: p.id,
-        partNumber: p.partNumber,
-        description: p.description || `MÓDULO DE AUTOMATIZACIÓN ${p.partNumber}`,
-        quantity: p.quantity,
-        baseUnitCostUsd: p.cost,
-        adValoremRate: 0,
-        marginRatePct: 45,
-      }));
+      const formatted: RawItemInput[] = parsed.map((p) => {
+        const desc = p.description || `MÓDULO DE AUTOMATIZACIÓN ${p.partNumber}`;
+        const tariff = classifySunatTariff(p.partNumber, desc);
+        return {
+          id: p.id,
+          partNumber: p.partNumber,
+          description: desc,
+          quantity: p.quantity,
+          baseUnitCostUsd: p.cost,
+          adValoremRate: tariff.adValoremRate,
+          hsCode: tariff.hsCode,
+          marginRatePct: 45,
+        };
+      });
       onItemsParsed(formatted);
       setText('');
       onClose();

@@ -19,6 +19,7 @@ import { CashFlowModal } from '@/components/quote/CashFlowModal';
 import { QuoteHistoryModal } from '@/components/quote/QuoteHistoryModal';
 import { saveQuoteToDatabase } from '@/services/quote-actions';
 import { getQuickDescription } from '@/utils/industrial-catalog';
+import { classifySunatTariff } from '@/utils/sunat-tariffs';
 import Logo from '@/components/Logo';
 import { Sparkles, History, FileSpreadsheet } from 'lucide-react';
 import { ImportExcelModal } from '@/components/quote/ImportExcelModal';
@@ -97,6 +98,7 @@ export default function Home() {
 
   const handleAddItem = () => {
     const defaultCode = '6ES7132-6BF01-0AA0';
+    const tariff = classifySunatTariff(defaultCode);
     setRawItems((prev) => [
       ...prev,
       {
@@ -105,7 +107,8 @@ export default function Home() {
         description: getQuickDescription(defaultCode),
         quantity: 1,
         baseUnitCostUsd: 75.0,
-        adValoremRate: 0,
+        adValoremRate: tariff.adValoremRate,
+        hsCode: tariff.hsCode,
         marginRatePct: 45,
       },
     ]);

@@ -44,6 +44,7 @@ export function BicodeProformaView({
   const [currency, setCurrency] = useState(initialCurrency);
   const [paymentTerm, setPaymentTerm] = useState(customer.paymentTerm || '60 DÍAS');
   const [paymentCondition, setPaymentCondition] = useState(customer.paymentCondition || 'CRÉDITO');
+  const [showTariffCodes, setShowTariffCodes] = useState(true);
 
   if (!isOpen) return null;
 
@@ -157,6 +158,15 @@ export function BicodeProformaView({
             <span className="flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
               <Edit3 className="h-3 w-3" /> Campos resaltados editables
             </span>
+            <label className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold cursor-pointer ml-2">
+              <input
+                type="checkbox"
+                checked={showTariffCodes}
+                onChange={(e) => setShowTariffCodes(e.target.checked)}
+                className="rounded text-[#1b5e54] focus:ring-0 cursor-pointer"
+              />
+              P. Arancelaria (SUNAT)
+            </label>
           </div>
 
           <div className="flex gap-2">
@@ -302,7 +312,14 @@ export function BicodeProformaView({
                   <tr key={it.id} className="text-slate-800">
                     <td className="py-2 px-2 text-center text-slate-500">{idx + 1}</td>
                     <td className="py-2 px-2 text-slate-600 font-semibold text-[10px]">UNIDADES</td>
-                    <td className="py-2 px-2 font-mono font-bold text-slate-900">{cleanPartNumber(it.partNumber)}</td>
+                    <td className="py-2 px-2 font-mono text-slate-900">
+                      <div className="font-bold">{cleanPartNumber(it.partNumber)}</div>
+                      {showTariffCodes && it.hsCode && (
+                        <div className="text-[9px] font-sans font-medium text-slate-500 whitespace-nowrap">
+                          P.A. {it.hsCode}
+                        </div>
+                      )}
+                    </td>
                     <td className="py-2 px-3 uppercase text-slate-700 text-[10px] leading-tight">{it.description}</td>
                     <td className="py-2 px-2 text-right font-mono">{it.quantity.toFixed(2)}</td>
                     <td className="py-2 px-2 text-right font-mono font-medium">{unitVal.toFixed(2)}</td>

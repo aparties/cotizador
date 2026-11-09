@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { CalculatedItem, RawItemInput, MARGIN_PROFILES } from '@/services/pricing-engine';
 import { Trash2, Plus, Check } from 'lucide-react';
 import { ProductAutocomplete } from './ProductAutocomplete';
+import { classifySunatTariff } from '@/utils/sunat-tariffs';
 
 type Props = {
   rawItems: RawItemInput[];
@@ -124,11 +125,21 @@ export function QuoteItemsTable({
                   <td className="py-2.5 pl-2">
                     <ProductAutocomplete
                       value={raw.partNumber}
-                      onChange={(val) => onUpdateItem(calc.id, { partNumber: val })}
+                      onChange={(val) => {
+                        const tariff = classifySunatTariff(val, raw.description);
+                        onUpdateItem(calc.id, {
+                          partNumber: val,
+                          adValoremRate: tariff.adValoremRate,
+                          hsCode: tariff.hsCode,
+                        });
+                      }}
                       onSelectProduct={(p) => {
+                        const tariff = classifySunatTariff(p.partNumber, p.description);
                         onUpdateItem(calc.id, {
                           partNumber: p.partNumber,
                           description: p.description,
+                          adValoremRate: tariff.adValoremRate,
+                          hsCode: tariff.hsCode,
                           ...(p.price > 0 ? { baseUnitCostUsd: p.price } : {}),
                         });
                       }}
@@ -139,7 +150,15 @@ export function QuoteItemsTable({
                     <input
                       type="text"
                       value={raw.description}
-                      onChange={(e) => onUpdateItem(calc.id, { description: e.target.value })}
+                      onChange={(e) => {
+                        const newDesc = e.target.value;
+                        const tariff = classifySunatTariff(raw.partNumber, newDesc);
+                        onUpdateItem(calc.id, {
+                          description: newDesc,
+                          adValoremRate: tariff.adValoremRate,
+                          hsCode: tariff.hsCode,
+                        });
+                      }}
                       className="w-full min-w-[200px] rounded-xl border border-transparent bg-transparent px-2 py-1 text-slate-300 hover:border-[#1d4034] focus:border-[#57cc99] focus:bg-[#081a14] focus:outline-none"
                     />
                   </td>
@@ -168,15 +187,24 @@ export function QuoteItemsTable({
                   </td>
 
                   <td className="py-2.5">
-                    <select
-                      value={raw.adValoremRate}
-                      onChange={(e) => onUpdateItem(calc.id, { adValoremRate: parseFloat(e.target.value) })}
-                      className="rounded-xl border border-[#1d4034] bg-[#081a14] px-2 py-1 text-xs text-white focus:outline-none"
-                    >
-                      <option value={0}>0%</option>
-                      <option value={6}>6%</option>
-                      <option value={11}>11%</option>
-                    </select>
+                    <div className="flex flex-col items-start gap-0.5">
+                      <select
+                        value={raw.adValoremRate}
+                        onChange={(e) => onUpdateItem(calc.id, { adValoremRate: parseFloat(e.target.value) })}
+                        className="rounded-xl border border-[#1d4034] bg-[#081a14] px-2 py-1 text-xs text-white focus:outline-none"
+                        title="Tasa Arancelaria Ad-Valorem SUNAT"
+                      >
+                        <option value={0}>0%</option>
+                        <option value={6}>6%</option>
+                        <option value={11}>11%</option>
+                      </select>
+                      <span
+                        className="text-[9px] font-mono text-[#57cc99]/80 truncate max-w-[85px] cursor-help"
+                        title={`Partida Arancelaria SUNAT: ${calc.hsCode}`}
+                      >
+                        {calc.hsCode}
+                      </span>
+                    </div>
                   </td>
 
                   <td className="py-2.5">
