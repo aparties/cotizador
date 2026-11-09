@@ -201,3 +201,4 @@ export function getQuickDescription(partNumber: string): string {
   if (ruleDesc) return ruleDesc;
   return `MÓDULO DE AUTOMATIZACIÓN ${cleanCode}`;
 }
+

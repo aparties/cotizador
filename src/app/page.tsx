@@ -140,126 +140,126 @@ export default function Home() {
       <div className="print:hidden pb-32">
         {/* Header Corporativo Skiz-Style */}
         <header className="border-b border-[#1d4034] bg-[#0b241c]/90 px-6 py-4 sticky top-0 z-30 backdrop-blur-md">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Logo className="w-11 h-11 transition-transform hover:scale-105" />
-            <div>
-              <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
-                QuickQuote Industrial
-                <span className="rounded-full bg-[#57cc99]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#57cc99]">
-                  Bicode Control E.I.R.L.
-                </span>
-              </h1>
-              <p className="text-xs text-[#a8b5b0]">Cálculo Landed Cost & Emisión de Proformas Perú</p>
+          <div className="mx-auto flex max-w-7xl items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Logo className="w-11 h-11 transition-transform hover:scale-105" />
+              <div>
+                <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                  QuickQuote Industrial
+                  <span className="rounded-full bg-[#57cc99]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#57cc99]">
+                    Bicode Control E.I.R.L.
+                  </span>
+                </h1>
+                <p className="text-xs text-[#a8b5b0]">Cálculo Landed Cost & Emisión de Proformas Perú</p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsHistoryOpen(true)}
+                className="flex items-center gap-1.5 rounded-full border border-[#1d4034] bg-[#143028] px-4 py-2 text-xs font-semibold text-slate-200 hover:border-[#57cc99] hover:text-white transition-all shadow-md"
+              >
+                <History className="h-4 w-4 text-[#57cc99]" /> Historial Guardado
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setIsPasteOpen(true)}
+                className="flex items-center gap-2 rounded-full bg-[#57cc99] px-5 py-2 text-xs font-bold text-[#0b241c] hover:bg-[#80ed99] transition-all shadow-lg"
+              >
+                <Sparkles className="h-4 w-4" /> Quick Paste / Pegado Masivo
+              </button>
             </div>
           </div>
+        </header>
 
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsHistoryOpen(true)}
-              className="flex items-center gap-1.5 rounded-full border border-[#1d4034] bg-[#143028] px-4 py-2 text-xs font-semibold text-slate-200 hover:border-[#57cc99] hover:text-white transition-all shadow-md"
-            >
-              <History className="h-4 w-4 text-[#57cc99]" /> Historial Guardado
-            </button>
+        {/* Contenido Principal */}
+        <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
+          {/* Parámetros & Cliente */}
+          <QuoteHeaderConfig
+            origin={origin}
+            onOriginChange={setOrigin}
+            prorationMethod={prorationMethod}
+            onProrationChange={setProrationMethod}
+            marginStrategy={marginStrategy}
+            onMarginStrategyChange={setMarginStrategy}
+            totalFreightUsd={totalFreightUsd}
+            onFreightChange={setTotalFreightUsd}
+            totalHandlingUsd={totalHandlingUsd}
+            onHandlingChange={setTotalHandlingUsd}
+            exchangeRatePen={exchangeRatePen}
+            onExchangeRateChange={setExchangeRatePen}
+            selectedCustomer={selectedCustomer}
+            onSelectCustomer={setSelectedCustomer}
+          />
 
-            <button
-              type="button"
-              onClick={() => setIsPasteOpen(true)}
-              className="flex items-center gap-2 rounded-full bg-[#57cc99] px-5 py-2 text-xs font-bold text-[#0b241c] hover:bg-[#80ed99] transition-all shadow-lg"
-            >
-              <Sparkles className="h-4 w-4" /> Quick Paste / Pegado Masivo
-            </button>
-          </div>
-        </div>
-      </header>
+          {/* Tabla Editable */}
+          <QuoteItemsTable
+            rawItems={rawItems}
+            calculatedItems={summary.items}
+            onUpdateItem={handleUpdateItem}
+            onDeleteItem={handleDeleteItem}
+            onAddItem={handleAddItem}
+            onApplyBulkMargin={handleApplyBulkMargin}
+          />
+        </main>
 
-      {/* Contenido Principal */}
-      <main className="mx-auto max-w-7xl px-6 py-6 space-y-6">
-        {/* Parámetros & Cliente */}
-        <QuoteHeaderConfig
-          origin={origin}
-          onOriginChange={setOrigin}
-          prorationMethod={prorationMethod}
-          onProrationChange={setProrationMethod}
-          marginStrategy={marginStrategy}
-          onMarginStrategyChange={setMarginStrategy}
-          totalFreightUsd={totalFreightUsd}
-          onFreightChange={setTotalFreightUsd}
-          totalHandlingUsd={totalHandlingUsd}
-          onHandlingChange={setTotalHandlingUsd}
+        {/* Barra de KPIs Inferior Fija */}
+        <KpiSummaryBar
+          summary={summary}
+          onOpenPrint={() => setIsPrintOpen(true)}
+          onOpenCashFlow={() => setIsCashFlowOpen(true)}
+          onSave={handleSaveQuote}
+          isSaving={isSaving}
+        />
+
+        {/* Modal de Pegado Rápido */}
+        <QuickPasteModal
+          isOpen={isPasteOpen}
+          onClose={() => setIsPasteOpen(false)}
+          onItemsParsed={handleItemsParsed}
+        />
+
+        {/* Modal de Flujo de Caja SUNAT (IGV Aduanero + Percepción) */}
+        <CashFlowModal
+          isOpen={isCashFlowOpen}
+          onClose={() => setIsCashFlowOpen(false)}
+          summary={summary}
           exchangeRatePen={exchangeRatePen}
-          onExchangeRateChange={setExchangeRatePen}
-          selectedCustomer={selectedCustomer}
-          onSelectCustomer={setSelectedCustomer}
         />
 
-        {/* Tabla Editable */}
-        <QuoteItemsTable
-          rawItems={rawItems}
-          calculatedItems={summary.items}
-          onUpdateItem={handleUpdateItem}
-          onDeleteItem={handleDeleteItem}
-          onAddItem={handleAddItem}
-          onApplyBulkMargin={handleApplyBulkMargin}
+        {/* Modal Historial de Cotizaciones desde Neon */}
+        <QuoteHistoryModal
+          isOpen={isHistoryOpen}
+          onClose={() => setIsHistoryOpen(false)}
+          onSelectQuoteToView={(q) => {
+            setCurrentQuoteCode(q.code);
+            if (q.clientBusinessName) {
+              setSelectedCustomer({
+                ruc: q.clientRuc,
+                businessName: q.clientBusinessName,
+                address: q.clientAddress,
+                paymentTerm: q.paymentTerm,
+                paymentCondition: q.paymentCondition,
+              });
+            }
+            if (q.items && q.items.length > 0) {
+              setRawItems(
+                q.items.map((it: any) => ({
+                  id: it.id,
+                  partNumber: it.partNumber,
+                  description: it.description,
+                  quantity: it.quantity,
+                  baseUnitCostUsd: Number(it.baseUnitCostUsd),
+                  adValoremRate: Number(it.adValoremRate),
+                  marginRatePct: Number(it.marginRatePct),
+                }))
+              );
+            }
+            setIsPrintOpen(true);
+          }}
         />
-      </main>
-
-      {/* Barra de KPIs Inferior Fija */}
-      <KpiSummaryBar
-        summary={summary}
-        onOpenPrint={() => setIsPrintOpen(true)}
-        onOpenCashFlow={() => setIsCashFlowOpen(true)}
-        onSave={handleSaveQuote}
-        isSaving={isSaving}
-      />
-
-      {/* Modal de Pegado Rápido */}
-      <QuickPasteModal
-        isOpen={isPasteOpen}
-        onClose={() => setIsPasteOpen(false)}
-        onItemsParsed={handleItemsParsed}
-      />
-
-      {/* Modal de Flujo de Caja SUNAT (IGV Aduanero + Percepción) */}
-      <CashFlowModal
-        isOpen={isCashFlowOpen}
-        onClose={() => setIsCashFlowOpen(false)}
-        summary={summary}
-        exchangeRatePen={exchangeRatePen}
-      />
-
-      {/* Modal Historial de Cotizaciones desde Neon */}
-      <QuoteHistoryModal
-        isOpen={isHistoryOpen}
-        onClose={() => setIsHistoryOpen(false)}
-        onSelectQuoteToView={(q) => {
-          setCurrentQuoteCode(q.code);
-          if (q.clientBusinessName) {
-            setSelectedCustomer({
-              ruc: q.clientRuc,
-              businessName: q.clientBusinessName,
-              address: q.clientAddress,
-              paymentTerm: q.paymentTerm,
-              paymentCondition: q.paymentCondition,
-            });
-          }
-          if (q.items && q.items.length > 0) {
-            setRawItems(
-              q.items.map((it: any) => ({
-                id: it.id,
-                partNumber: it.partNumber,
-                description: it.description,
-                quantity: it.quantity,
-                baseUnitCostUsd: Number(it.baseUnitCostUsd),
-                adValoremRate: Number(it.adValoremRate),
-                marginRatePct: Number(it.marginRatePct),
-              }))
-            );
-          }
-          setIsPrintOpen(true);
-        }}
-      />
       </div>
 
       {/* Modal Proforma Oficial Idéntica a Bicode Control */}
