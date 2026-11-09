@@ -15,13 +15,17 @@ import { QuoteItemsTable } from '@/components/quote/QuoteItemsTable';
 import { KpiSummaryBar } from '@/components/quote/KpiSummaryBar';
 import { BicodeProformaView } from '@/components/quote/BicodeProformaView';
 import { SelectedCustomer } from '@/components/quote/CustomerSelector';
+import { CashFlowModal } from '@/components/quote/CashFlowModal';
+import { QuoteHistoryModal } from '@/components/quote/QuoteHistoryModal';
 import { saveQuoteToDatabase } from '@/services/quote-actions';
 import Logo from '@/components/Logo';
-import { Sparkles } from 'lucide-react';
+import { Sparkles, History } from 'lucide-react';
 
 export default function Home() {
   const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [isCashFlowOpen, setIsCashFlowOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [currentQuoteCode, setCurrentQuoteCode] = useState('0001-0000928');
 
@@ -149,6 +153,14 @@ export default function Home() {
           <div className="flex items-center gap-3">
             <button
               type="button"
+              onClick={() => setIsHistoryOpen(true)}
+              className="flex items-center gap-1.5 rounded-full border border-[#1d4034] bg-[#143028] px-4 py-2 text-xs font-semibold text-slate-200 hover:border-[#57cc99] hover:text-white transition-all shadow-md"
+            >
+              <History className="h-4 w-4 text-[#57cc99]" /> Historial Guardado
+            </button>
+
+            <button
+              type="button"
               onClick={() => setIsPasteOpen(true)}
               className="flex items-center gap-2 rounded-full bg-[#57cc99] px-5 py-2 text-xs font-bold text-[#0b241c] hover:bg-[#80ed99] transition-all shadow-lg"
             >
@@ -193,6 +205,7 @@ export default function Home() {
       <KpiSummaryBar
         summary={summary}
         onOpenPrint={() => setIsPrintOpen(true)}
+        onOpenCashFlow={() => setIsCashFlowOpen(true)}
         onSave={handleSaveQuote}
         isSaving={isSaving}
       />
@@ -202,6 +215,46 @@ export default function Home() {
         isOpen={isPasteOpen}
         onClose={() => setIsPasteOpen(false)}
         onItemsParsed={handleItemsParsed}
+      />
+
+      {/* Modal de Flujo de Caja SUNAT (IGV Aduanero + Percepción) */}
+      <CashFlowModal
+        isOpen={isCashFlowOpen}
+        onClose={() => setIsCashFlowOpen(false)}
+        summary={summary}
+        exchangeRatePen={exchangeRatePen}
+      />
+
+      {/* Modal Historial de Cotizaciones desde Neon */}
+      <QuoteHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        onSelectQuoteToView={(q) => {
+          setCurrentQuoteCode(q.code);
+          if (q.clientBusinessName) {
+            setSelectedCustomer({
+              ruc: q.clientRuc,
+              businessName: q.clientBusinessName,
+              address: q.clientAddress,
+              paymentTerm: q.paymentTerm,
+              paymentCondition: q.paymentCondition,
+            });
+          }
+          if (q.items && q.items.length > 0) {
+            setRawItems(
+              q.items.map((it: any) => ({
+                id: it.id,
+                partNumber: it.partNumber,
+                description: it.description,
+                quantity: it.quantity,
+                baseUnitCostUsd: Number(it.baseUnitCostUsd),
+                adValoremRate: Number(it.adValoremRate),
+                marginRatePct: Number(it.marginRatePct),
+              }))
+            );
+          }
+          setIsPrintOpen(true);
+        }}
       />
 
       {/* Modal Proforma Oficial Idéntica a Bicode Control */}

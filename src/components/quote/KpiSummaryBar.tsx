@@ -6,11 +6,12 @@ import { TrendingUp, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 type Props = {
   summary: QuoteSummary;
   onOpenPrint: () => void;
+  onOpenCashFlow?: () => void;
   onSave?: () => void;
   isSaving?: boolean;
 };
 
-export function KpiSummaryBar({ summary, onOpenPrint, onSave, isSaving = false }: Props) {
+export function KpiSummaryBar({ summary, onOpenPrint, onOpenCashFlow, onSave, isSaving = false }: Props) {
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1d4034] bg-[#0b241c]/95 backdrop-blur-lg px-6 py-3">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
@@ -48,11 +49,21 @@ export function KpiSummaryBar({ summary, onOpenPrint, onSave, isSaving = false }
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5">
+          {onOpenCashFlow && (
+            <button
+              type="button"
+              onClick={onOpenCashFlow}
+              className="flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-4 py-2.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-all"
+            >
+              Flujo de Caja SUNAT
+            </button>
+          )}
+
           <button
             type="button"
             onClick={onOpenPrint}
-            className="flex items-center gap-2 rounded-full border border-[#1d4034] bg-[#143028] px-6 py-2.5 text-sm font-bold text-white hover:border-[#57cc99] hover:bg-[#1d4034] transition-all"
+            className="flex items-center gap-2 rounded-full border border-[#1d4034] bg-[#143028] px-5 py-2.5 text-sm font-bold text-white hover:border-[#57cc99] hover:bg-[#1d4034] transition-all"
           >
             <FileSpreadsheet className="h-4 w-4 text-[#57cc99]" /> Ver Proforma Bicode
           </button>

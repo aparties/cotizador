@@ -52,6 +52,9 @@ export function BicodeProformaView({
   const subtotalAmount = isSoles ? summary.subtotalNetPen : summary.subtotalNetUsd;
   const igvAmount = isSoles ? summary.totalIgvPen : summary.totalIgvUsd;
 
+  // Si es CONTADO, no debe mostrar Detalle Crédito
+  const isContado = paymentCondition.toUpperCase().includes('CONTADO');
+
   const montoEnLetras = numberToLetters(totalAmount, currency);
 
   return (
@@ -286,26 +289,36 @@ export function BicodeProformaView({
 
             {/* Condición de Pago Editable */}
             <div className="col-span-3 font-bold text-slate-900">CONDICIÓN DE PAGO</div>
-            <div className="col-span-9 font-bold text-slate-900">
+            <div className="col-span-9 font-bold text-slate-900 flex items-center gap-2">
               <input
                 type="text"
                 value={paymentCondition}
-                onChange={(e) => setPaymentCondition(e.target.value)}
-                className="w-full bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none text-slate-900 font-bold"
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setPaymentCondition(val);
+                  if (val.toUpperCase().includes('CONTADO') && paymentTerm.includes('DÍAS')) {
+                    setPaymentTerm('CONTADO');
+                  }
+                }}
+                className="w-full bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none text-slate-900 font-bold uppercase"
               />
             </div>
 
-            {/* Detalle Crédito */}
-            <div className="col-span-3 font-bold text-slate-900 self-start pt-0.5">DETALLE CRÉDITO</div>
-            <div className="col-span-9 space-y-0.5 text-[10px]">
-              <p>NÚMERO DE CUOTAS: 1</p>
-              <p className="font-bold">
-                MONTO NETO PENDIENTE DE PAGO: {currencySymbol} {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </p>
-              <p>
-                1- FECHA DE VENCIMIENTO: {dueDate} MONTO: {totalAmount.toFixed(2)} {currency.toUpperCase()}
-              </p>
-            </div>
+            {/* Detalle Crédito (Solo si NO es CONTADO) */}
+            {!isContado && (
+              <>
+                <div className="col-span-3 font-bold text-slate-900 self-start pt-0.5">DETALLE CRÉDITO</div>
+                <div className="col-span-9 space-y-0.5 text-[10px]">
+                  <p>NÚMERO DE CUOTAS: 1</p>
+                  <p className="font-bold">
+                    MONTO NETO PENDIENTE DE PAGO: {currencySymbol} {totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </p>
+                  <p>
+                    1- FECHA DE VENCIMIENTO: {dueDate} MONTO: {totalAmount.toFixed(2)} {currency.toUpperCase()}
+                  </p>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Cuentas Bancarias Oficiales Bicode Control */}

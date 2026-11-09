@@ -95,3 +95,4 @@ export function CashFlowModal({ isOpen, onClose, summary, exchangeRatePen }: Pro
     </div>
   );
 }
+
