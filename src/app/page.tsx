@@ -18,6 +18,7 @@ import { SelectedCustomer } from '@/components/quote/CustomerSelector';
 import { CashFlowModal } from '@/components/quote/CashFlowModal';
 import { QuoteHistoryModal } from '@/components/quote/QuoteHistoryModal';
 import { saveQuoteToDatabase } from '@/services/quote-actions';
+import { getQuickDescription } from '@/utils/industrial-catalog';
 import Logo from '@/components/Logo';
 import { Sparkles, History } from 'lucide-react';
 
@@ -51,7 +52,7 @@ export default function Home() {
     {
       id: 'item-1',
       partNumber: '6ES7131-6BF01-0AA0',
-      description: 'REPUESTOS SIEMENS 6ES7131-6BF01-0AA0',
+      description: 'SIMATIC ET 200SP, MÓDULO DE ENTRADAS DIGITALES DI 8x24V DC BA',
       quantity: 10,
       baseUnitCostUsd: 52.0,
       adValoremRate: 0,
@@ -60,7 +61,7 @@ export default function Home() {
     {
       id: 'item-2',
       partNumber: '6ES7134-6HD01-0BA1',
-      description: 'REPUESTOS ELECTRICOS SIEMENS 6ES7134-6HD01-0BA1',
+      description: 'SIMATIC ET 200SP, MÓDULO DE ENTRADAS ANALÓGICAS AI 4xU/I 2-HILOS ST',
       quantity: 2,
       baseUnitCostUsd: 180.0,
       adValoremRate: 0,
@@ -93,12 +94,13 @@ export default function Home() {
   };
 
   const handleAddItem = () => {
+    const defaultCode = '6ES7132-6BF01-0AA0';
     setRawItems((prev) => [
       ...prev,
       {
         id: crypto.randomUUID(),
-        partNumber: '6ES7132-6BF01-0AA0',
-        description: 'REPUESTOS SIEMENS 6ES7132-6BF01-0AA0',
+        partNumber: defaultCode,
+        description: getQuickDescription(defaultCode),
         quantity: 1,
         baseUnitCostUsd: 75.0,
         adValoremRate: 0,

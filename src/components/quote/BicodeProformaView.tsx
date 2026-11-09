@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { QuoteSummary } from '@/services/pricing-engine';
 import { numberToLetters } from '@/utils/number-to-letters';
+import { cleanPartNumber } from '@/utils/quote-parser';
 import { SelectedCustomer } from './CustomerSelector';
 import { Printer, X, Edit3 } from 'lucide-react';
 
@@ -288,7 +289,7 @@ export function BicodeProformaView({
                   <tr key={it.id} className="text-slate-800">
                     <td className="py-2 px-2 text-center text-slate-500">{idx + 1}</td>
                     <td className="py-2 px-2 text-slate-600 font-semibold text-[10px]">UNIDADES</td>
-                    <td className="py-2 px-2 font-mono font-bold text-slate-900">{it.partNumber}</td>
+                    <td className="py-2 px-2 font-mono font-bold text-slate-900">{cleanPartNumber(it.partNumber)}</td>
                     <td className="py-2 px-3 uppercase text-slate-700 text-[10px] leading-tight">{it.description}</td>
                     <td className="py-2 px-2 text-right font-mono">{it.quantity.toFixed(2)}</td>
                     <td className="py-2 px-2 text-right font-mono font-medium">{unitVal.toFixed(2)}</td>

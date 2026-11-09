@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { revalidatePath } from 'next/cache';
 import { calculateQuote, RawItemInput, QuoteGlobalParams } from './pricing-engine';
 import { numberToLetters } from '@/utils/number-to-letters';
+import { resolvePartDescription } from './part-lookup';
 
 export interface SaveQuoteInput {
   customer: {
@@ -141,4 +142,31 @@ export async function getRecentQuotes() {
     return { success: false, quotes: [] };
   }
 }
+
+export async function batchResolveDescriptions(
+  items: { partNumber: string; hasUserDescription: boolean; description?: string }[]
+) {
+  try {
+    const resolved = await Promise.all(
+      items.map(async (item) => {
+        if (item.hasUserDescription && item.description && item.description.trim()) {
+          return {
+            partNumber: item.partNumber,
+            description: item.description.trim(),
+          };
+        }
+        const desc = await resolvePartDescription(item.partNumber);
+        return {
+          partNumber: item.partNumber,
+          description: desc,
+        };
+      })
+    );
+    return { success: true, items: resolved };
+  } catch (error) {
+    console.error('Error in batchResolveDescriptions:', error);
+    return { success: false, items: [] };
+  }
+}
+
 

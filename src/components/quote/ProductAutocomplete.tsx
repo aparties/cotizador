@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import productsData from '@/data/seed-products.json';
+import { getQuickDescription } from '@/utils/industrial-catalog';
 import { Cpu } from 'lucide-react';
 
 type Props = {
@@ -49,7 +50,7 @@ export function ProductAutocomplete({ value, onChange, onSelectProduct }: Props)
                 e.preventDefault();
                 onSelectProduct({
                   partNumber: p.partNumber,
-                  description: `${p.category} ${p.brand} ${p.partNumber}`,
+                  description: getQuickDescription(p.partNumber),
                   price: p.salePrice,
                 });
                 setIsOpen(false);
