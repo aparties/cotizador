@@ -277,7 +277,7 @@ export function BicodeProformaView({
                 <th className="py-1.5 px-3">DESCRIPCIÓN</th>
                 <th className="py-1.5 px-2 text-right w-14">CANT.</th>
                 <th className="py-1.5 px-2 text-right w-20">V. UNIT.</th>
-                <th className="py-1.5 px-2 text-right w-24">TOTAL</th>
+                <th className="py-1.5 px-2 text-right w-28 whitespace-nowrap">TOTAL INC. IGV</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 border-b border-slate-300">
