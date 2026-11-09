@@ -153,3 +153,4 @@ export function classifySunatTariff(partNumber: string, description: string = ''
     description: 'Cuadros, paneles y soportes para control eléctrico / autómatas programables',
   };
 }
+
