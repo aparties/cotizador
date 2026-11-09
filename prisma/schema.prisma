@@ -142,3 +142,4 @@ model QuoteItem {
   @@index([partNumber])
   @@map("quote_items")
 }
+
