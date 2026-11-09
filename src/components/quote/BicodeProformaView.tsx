@@ -242,9 +242,11 @@ export function BicodeProformaView({
           </div>
 
           {/* Cliente */}
-          <div className="col-span-8 flex items-center">
-            <span className="w-24 font-bold text-slate-900">CLIENTE</span>
-            <span className="font-bold text-slate-900 uppercase truncate">{customer.businessName || 'HEINEKEN PERU S.A.C.'}</span>
+          <div className="col-span-8 flex items-start">
+            <span className="w-24 font-bold text-slate-900 flex-shrink-0">CLIENTE</span>
+            <span className="font-bold text-slate-900 uppercase break-words whitespace-normal leading-tight flex-1">
+              {customer.businessName || 'HEINEKEN PERU S.A.C.'}
+            </span>
           </div>
 
           {/* Fecha Vencimiento Editable */}
@@ -261,7 +263,9 @@ export function BicodeProformaView({
           {/* Dirección */}
           <div className="col-span-8 flex items-start">
             <span className="w-24 font-bold text-slate-900 flex-shrink-0">DIRECCIÓN</span>
-            <span className="text-slate-700 text-[10px] leading-tight truncate">{customer.address || 'AV. CIRCUNVALACIÓN GOLF LOS I NRO. 154 INT. 1702 - SURCO'}</span>
+            <span className="text-slate-700 text-[10px] leading-snug break-words whitespace-normal flex-1">
+              {customer.address || 'AV. CIRCUNVALACIÓN GOLF LOS I NRO. 154 INT. 1702 - SURCO'}
+            </span>
           </div>
 
           {/* Moneda Editable */}
@@ -270,11 +274,14 @@ export function BicodeProformaView({
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              className="font-bold text-slate-900 bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none cursor-pointer"
+              className="font-bold text-slate-900 bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none cursor-pointer print:hidden"
             >
               <option value="DOLARES AMERICANOS">DOLARES AMERICANOS</option>
               <option value="SOLES">SOLES</option>
             </select>
+            <span className="hidden print:inline font-bold text-slate-900">
+              {currency}
+            </span>
           </div>
         </div>
 
