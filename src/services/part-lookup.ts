@@ -80,15 +80,17 @@ export async function resolvePartDescription(partNumber: string): Promise<string
   }
 
   // 2. Database Product match
-  try {
-    const dbProduct = await prisma.product.findFirst({
-      where: { partNumber: cleanCode }
-    });
-    if (dbProduct && dbProduct.category && dbProduct.category !== 'REPUESTOS' && dbProduct.category !== 'REPUESTOS ELECTRICOS') {
-      return `${dbProduct.brand ? dbProduct.brand + ' - ' : ''}${dbProduct.category}`;
+  if (process.env.DATABASE_URL) {
+    try {
+      const dbProduct = await prisma.product.findFirst({
+        where: { partNumber: cleanCode }
+      });
+      if (dbProduct && dbProduct.category && dbProduct.category !== 'REPUESTOS' && dbProduct.category !== 'REPUESTOS ELECTRICOS') {
+        return `${dbProduct.brand ? dbProduct.brand + ' - ' : ''}${dbProduct.category}`;
+      }
+    } catch {
+      // DB might be temporarily unreachable or table empty
     }
-  } catch {
-    // DB might be temporarily unreachable or table empty
   }
 
   // 3. Try Web Search

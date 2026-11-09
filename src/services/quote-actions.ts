@@ -27,10 +27,17 @@ function withTimeout<T>(promise: Promise<T>, ms: number, errorMsg: string): Prom
 }
 
 export type SaveQuoteResult =
-  | { success: true; quote: any; code: string }
+  | { success: true; quoteId: string; code: string }
   | { success: false; error: string };
 
 export async function saveQuoteToDatabase(input: SaveQuoteInput): Promise<SaveQuoteResult> {
+  if (!process.env.DATABASE_URL) {
+    return {
+      success: false,
+      error: 'La variable de entorno DATABASE_URL no está configurada en Vercel. Ve a Vercel > Settings > Environment Variables y agrega DATABASE_URL con la URL de Neon PostgreSQL.',
+    };
+  }
+
   try {
     return await withTimeout(
       (async () => {
@@ -127,13 +134,15 @@ export async function saveQuoteToDatabase(input: SaveQuoteInput): Promise<SaveQu
               })),
             },
           },
-          include: {
-            items: true,
-          },
         });
 
         revalidatePath('/');
-        return { success: true, quote: saved, code };
+        // Return only serializable primitives to client
+        return {
+          success: true,
+          quoteId: saved.id,
+          code,
+        };
       })(),
       15000,
       'Tiempo de espera agotado al conectar con Neon PostgreSQL (15s).'
@@ -149,13 +158,18 @@ export async function saveQuoteToDatabase(input: SaveQuoteInput): Promise<SaveQu
 
 export async function getRecentQuotes() {
   try {
+    if (!process.env.DATABASE_URL) {
+      return { success: false, quotes: [] };
+    }
     const quotes = await prisma.quote.findMany({
       take: 10,
       orderBy: { createdAt: 'desc' },
       include: { items: true },
     });
-    return { success: true, quotes };
+    // Serialize Decimals and Dates to plain JSON for client components
+    return { success: true, quotes: JSON.parse(JSON.stringify(quotes)) };
   } catch (error) {
+    console.error('Error fetching recent quotes from Neon:', error);
     return { success: false, quotes: [] };
   }
 }
