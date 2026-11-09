@@ -20,13 +20,15 @@ import { QuoteHistoryModal } from '@/components/quote/QuoteHistoryModal';
 import { saveQuoteToDatabase } from '@/services/quote-actions';
 import { getQuickDescription } from '@/utils/industrial-catalog';
 import Logo from '@/components/Logo';
-import { Sparkles, History } from 'lucide-react';
+import { Sparkles, History, FileSpreadsheet } from 'lucide-react';
+import { ImportExcelModal } from '@/components/quote/ImportExcelModal';
 
 export default function Home() {
   const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isCashFlowOpen, setIsCashFlowOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [currentQuoteCode, setCurrentQuoteCode] = useState('0002-001');
 
@@ -163,6 +165,15 @@ export default function Home() {
             <div className="flex items-center gap-3">
               <button
                 type="button"
+                onClick={() => setIsImportOpen(true)}
+                className="flex items-center gap-1.5 rounded-full border border-[#1d4034] bg-[#143028] px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-[#57cc99] hover:text-white transition-all shadow-md"
+                title="Sincronizar inventario desde archivo Excel (.xlsx)"
+              >
+                <FileSpreadsheet className="h-4 w-4 text-[#57cc99]" /> Importar Excel
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setIsHistoryOpen(true)}
                 className="flex items-center gap-1.5 rounded-full border border-[#1d4034] bg-[#143028] px-4 py-2 text-xs font-semibold text-slate-200 hover:border-[#57cc99] hover:text-white transition-all shadow-md"
               >
@@ -275,6 +286,12 @@ export default function Home() {
         summary={summary}
         customer={selectedCustomer}
         quoteNumber={currentQuoteCode}
+      />
+
+      {/* Modal para importar inventario Excel / Keyfacil */}
+      <ImportExcelModal
+        isOpen={isImportOpen}
+        onClose={() => setIsImportOpen(false)}
       />
     </div>
   );
