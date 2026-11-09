@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { calculateQuote, RawItemInput, QuoteGlobalParams } from './pricing-engine';
 import { numberToLetters } from '@/utils/number-to-letters';
 import { resolvePartDescription } from './part-lookup';
+import { lookupPartsWithGemini } from './gemini-lookup';
 
 export interface SaveQuoteInput {
   customer: {
@@ -178,6 +179,21 @@ export async function batchResolveDescriptions(
   items: { partNumber: string; hasUserDescription: boolean; description?: string }[]
 ) {
   try {
+    const codesNeedingLookup = items
+      .filter((it) => !it.hasUserDescription || !it.description?.trim())
+      .map((it) => it.partNumber);
+
+    // 1. Intento de resolución masiva con Gemini AI si está configurado
+    let geminiMap = new Map<string, string>();
+    if (codesNeedingLookup.length > 0) {
+      try {
+        geminiMap = await lookupPartsWithGemini(codesNeedingLookup);
+      } catch (err) {
+        console.warn('Gemini batch error, proceeding to catalog fallback:', err);
+      }
+    }
+
+    // 2. Resolver cada ítem: Usuario -> Gemini AI -> Catálogo Curado / MLFB Rules
     const resolved = await Promise.all(
       items.map(async (item) => {
         if (item.hasUserDescription && item.description && item.description.trim()) {
@@ -186,6 +202,16 @@ export async function batchResolveDescriptions(
             description: item.description.trim(),
           };
         }
+
+        const cleanCode = item.partNumber.trim().toUpperCase();
+        const geminiDesc = geminiMap.get(cleanCode);
+        if (geminiDesc && geminiDesc.trim()) {
+          return {
+            partNumber: item.partNumber,
+            description: geminiDesc.trim().toUpperCase(),
+          };
+        }
+
         const desc = await resolvePartDescription(item.partNumber);
         return {
           partNumber: item.partNumber,

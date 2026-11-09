@@ -10,6 +10,31 @@ export interface ParsedItem {
   hasUserDescription: boolean;
 }
 
+const CONDITION_WORDS = new Set([
+  'original', 'new', 'brand', 'sealed', 'factory', 'box', 'open', 'used',
+  'tested', 'refurbished', 'reacondicionado', 'nuevo', 'usado', 'segunda',
+  'mano', 'working', 'good', 'condition', 'oem', 'nib', 'nob', 'fs', 'bn',
+  'in', 'a', 'de', 'en', 'con', 'with', 'pcs', 'pc', 'ea', 'unid', 'pza', 'pz', 'cu', 'qty', 'cant'
+]);
+
+/**
+ * Checks if a string only contains condition or packaging words (e.g. "original new", "brand new")
+ * rather than a real product description.
+ */
+export function isConditionOnly(text: string): boolean {
+  if (!text) return true;
+  const clean = text
+    .toLowerCase()
+    .replace(/\b\d+\s*(?:pcs|pc|ea|unid|pza|pz)?\b/gi, ' ')
+    .replace(/[^a-záéíóúñ\s]/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const words = clean.split(' ').filter(Boolean);
+  if (words.length === 0) return true;
+  return words.every((w) => CONDITION_WORDS.has(w));
+}
+
 /**
  * Cleans the part number to ensure strictly the pure industrial code is preserved.
  * Eliminates trailing suffixes like "---1PCS", "---2PCS", "x 2", "1pcs", trailing dashes/spaces.
@@ -79,10 +104,22 @@ export function parseQuickInput(rawText: string): ParsedItem[] {
       .replace(/\s+/g, ' ')
       .trim();
 
-    // Check if what remains is a genuine textual description (at least 4 alphabetical characters)
+    // Check if what remains is a genuine textual description or merely a condition/state like "original new"
     const lettersOnly = remainder.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/g, '');
-    const hasUserDescription = lettersOnly.length >= 4 && !/^repuesto\s+de\s+automatizaci/i.test(remainder);
+    const isCondition = isConditionOnly(remainder);
+    const hasUserDescription =
+      lettersOnly.length >= 4 &&
+      !isCondition &&
+      !/^repuesto\s+de\s+automatizaci/i.test(remainder) &&
+      !/^m[oó]dulo\s+de\s+automatizaci/i.test(remainder);
     const userDescription = hasUserDescription ? remainder : '';
+
+    if (isCondition) {
+      if (/used|usado|segunda/i.test(remainder)) condition = 'USADO_TESTEADO';
+      if (/refurb|reacondicionado/i.test(remainder)) condition = 'REFURBISHED';
+      if (/open[\s-]?box/i.test(remainder)) condition = 'NUEVO_OPEN_BOX';
+      if (/original|brand\s*new|new/i.test(remainder)) condition = 'NUEVO_ORIGINAL';
+    }
 
     if (partNumber) {
       results.push({
