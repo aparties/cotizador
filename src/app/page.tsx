@@ -113,8 +113,12 @@ export default function Home() {
       <header className="border-b border-[#1d4034] bg-[#0b241c]/90 px-6 py-4 sticky top-0 z-30 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-[#57cc99]/20 border border-[#57cc99]/40 flex items-center justify-center text-[#57cc99]">
-              <Layers className="h-5 w-5" />
+            <div className="h-11 w-11 rounded-2xl bg-white p-1 border border-[#57cc99]/40 flex items-center justify-center shadow-md">
+              <img
+                src="/bicode-logo.png"
+                alt="Logo Bicode Control"
+                className="h-full w-full object-contain"
+              />
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">

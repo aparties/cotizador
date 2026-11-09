@@ -53,10 +53,13 @@ export function BicodeProformaView({
         {/* Encabezado: Logo Bicode + Recuadro RUC */}
         <div className="flex justify-between items-start gap-6">
           <div className="flex gap-4 items-start">
-            <div className="h-20 w-20 flex-shrink-0 border-2 border-slate-900 rounded-full flex flex-col items-center justify-center p-1 text-center font-black">
-              <span className="text-[10px] tracking-widest text-slate-900 leading-none">BICODE</span>
-              <span className="text-base text-red-600 font-bold">H</span>
-              <span className="text-[9px] tracking-wider text-slate-800 leading-none">CONTROL</span>
+            <div className="h-24 w-24 flex-shrink-0 flex items-center justify-center">
+              {/* Logo Oficial Bicode Control */}
+              <img
+                src="/bicode-logo.png"
+                alt="Logo Bicode Control"
+                className="h-full w-full object-contain"
+              />
             </div>
 
             <div className="text-xs space-y-0.5">
