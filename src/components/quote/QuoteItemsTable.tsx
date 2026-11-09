@@ -1,7 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { CalculatedItem, RawItemInput, MARGIN_PROFILES } from '@/services/pricing-engine';
-import { Trash2, Plus } from 'lucide-react';
+import { Trash2, Plus, Check } from 'lucide-react';
 import { ProductAutocomplete } from './ProductAutocomplete';
 
 type Props = {
@@ -21,6 +22,14 @@ export function QuoteItemsTable({
   onAddItem,
   onApplyBulkMargin,
 }: Props) {
+  const [customMarkup, setCustomMarkup] = useState('');
+
+  const handleApplyCustom = () => {
+    const val = parseFloat(customMarkup);
+    if (!isNaN(val) && val >= 0) {
+      onApplyBulkMargin(val);
+    }
+  };
   return (
     <div className="rounded-[40px] border border-[#1d4034] bg-[#143028] p-6 shadow-xl">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -45,10 +54,38 @@ export function QuoteItemsTable({
             <button
               type="button"
               onClick={() => onApplyBulkMargin(MARGIN_PROFILES.CRITICO_STOCK.markup)}
-              className="rounded-full px-2.5 py-1 text-[11px] font-medium text-[#a8b5b0] hover:bg-[#57cc99]/20 hover:text-white"
+              className="rounded-full px-2.5 py-1 text-[11px] font-medium text-[#a8b5b0] hover:bg-[#57cc99]/20 hover:text-white transition-colors"
             >
               Crítico 65%
             </button>
+
+            {/* Campo Custom para otro porcentaje */}
+            <div className="flex items-center gap-1 border-l border-[#1d4034] pl-2 pr-1">
+              <span className="text-[10px] font-semibold text-[#a8b5b0]">Custom:</span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  step="any"
+                  placeholder="%"
+                  value={customMarkup}
+                  onChange={(e) => setCustomMarkup(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleApplyCustom();
+                    }
+                  }}
+                  className="w-14 rounded-full bg-[#143028] border border-[#1d4034] px-2 py-0.5 text-center font-mono text-[11px] font-bold text-white placeholder-emerald-100/30 focus:border-[#57cc99] focus:outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={handleApplyCustom}
+                  className="rounded-full bg-[#57cc99] px-2.5 py-0.5 text-[10px] font-bold text-[#0b241c] hover:bg-[#80ed99] transition-all"
+                >
+                  OK
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 

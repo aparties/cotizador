@@ -57,8 +57,33 @@ export function BicodeProformaView({
 
   const montoEnLetras = numberToLetters(totalAmount, currency);
 
+  // Manejo de Impresión con Nombre de Archivo Estándar Bicode
+  const handlePrint = () => {
+    const originalTitle = document.title;
+    // Formato exacto requerido: 20603355807-PF-0001-928
+    let cleanCode = quoteNumber.trim().replace(/^PF-?/i, '');
+    const parts = cleanCode.split('-');
+    let formattedCode = cleanCode;
+    if (parts.length === 2) {
+      const serie = parts[0];
+      const num = parseInt(parts[1], 10);
+      if (!isNaN(num)) {
+        formattedCode = `${serie}-${num}`;
+      }
+    }
+    const pdfFileName = `20603355807-PF-${formattedCode}`;
+    document.title = pdfFileName;
+    window.print();
+    setTimeout(() => {
+      document.title = originalTitle;
+    }, 1500);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 print:p-0 print:static print:bg-white print:block">
+    <div
+      id="proforma-modal-container"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 print:static print:inset-auto print:p-0 print:m-0 print:bg-white print:block print:w-full print:h-auto print:max-h-none print:overflow-visible"
+    >
       
       {/* Estilos estrictos de impresión A4 */}
       <style jsx global>{`
@@ -67,17 +92,56 @@ export function BicodeProformaView({
             size: A4 portrait;
             margin: 8mm 10mm;
           }
-          body {
+          html, body {
             background: white !important;
+            background-color: white !important;
             color: black !important;
-            print-color-adjust: exact;
-            -webkit-print-color-adjust: exact;
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            height: auto !important;
+            overflow: visible !important;
+            print-color-adjust: exact !important;
+            -webkit-print-color-adjust: exact !important;
+          }
+          #proforma-modal-container {
+            position: static !important;
+            inset: auto !important;
+            display: block !important;
+            background: white !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            overflow: visible !important;
+            box-shadow: none !important;
+          }
+          #proforma-sheet {
+            box-shadow: none !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            max-height: none !important;
+            overflow: visible !important;
+          }
+          tr {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+          }
+          .avoid-break {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
         }
       `}</style>
 
       {/* Contenedor A4 Proporcional */}
-      <div className="relative max-h-[95vh] w-full max-w-[210mm] overflow-y-auto rounded-xl bg-white p-8 font-sans text-slate-800 shadow-2xl print:max-h-none print:w-[210mm] print:min-h-[297mm] print:rounded-none print:p-0 print:shadow-none">
+      <div
+        id="proforma-sheet"
+        className="relative max-h-[95vh] w-full max-w-[210mm] overflow-y-auto rounded-xl bg-white p-8 font-sans text-slate-800 shadow-2xl print:max-h-none print:w-[210mm] print:min-h-[297mm] print:rounded-none print:p-0 print:shadow-none"
+      >
         
         {/* Barra superior de controles (Oculta en Impresión) */}
         <div className="mb-4 flex flex-wrap items-center justify-between border-b pb-3 print:hidden gap-2">
@@ -91,7 +155,7 @@ export function BicodeProformaView({
           <div className="flex gap-2">
             <button
               type="button"
-              onClick={() => window.print()}
+              onClick={handlePrint}
               className="flex items-center gap-2 rounded-full bg-[#1b5e54] px-6 py-2 text-xs font-bold text-white hover:bg-[#144740] shadow-md transition-all"
             >
               <Printer className="h-4 w-4" /> Imprimir / Exportar a PDF (A4)
@@ -300,8 +364,34 @@ export function BicodeProformaView({
                     setPaymentTerm('CONTADO');
                   }
                 }}
-                className="w-full bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none text-slate-900 font-bold uppercase"
+                className="w-44 bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none text-slate-900 font-bold uppercase"
               />
+              <div className="flex gap-1 print:hidden text-[10px]">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentCondition('CONTADO');
+                    setPaymentTerm('CONTADO');
+                  }}
+                  className={`rounded px-2 py-0.5 border transition-all ${
+                    isContado ? 'bg-emerald-700 text-white border-emerald-700 font-bold' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  Contado
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPaymentCondition('CRÉDITO');
+                    setPaymentTerm('60 DÍAS');
+                  }}
+                  className={`rounded px-2 py-0.5 border transition-all ${
+                    !isContado ? 'bg-[#1b5e54] text-white border-[#1b5e54] font-bold' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                  }`}
+                >
+                  Crédito
+                </button>
+              </div>
             </div>
 
             {/* Detalle Crédito (Solo si NO es CONTADO) */}

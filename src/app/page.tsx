@@ -133,9 +133,11 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b241c] pb-32 text-slate-100">
-      {/* Header Corporativo Skiz-Style */}
-      <header className="border-b border-[#1d4034] bg-[#0b241c]/90 px-6 py-4 sticky top-0 z-30 backdrop-blur-md">
+    <div className="min-h-screen bg-[#0b241c] text-slate-100 print:bg-white print:p-0 print:m-0">
+      {/* Contenido de la Aplicación Web (Oculto completamente al Imprimir) */}
+      <div className="print:hidden pb-32">
+        {/* Header Corporativo Skiz-Style */}
+        <header className="border-b border-[#1d4034] bg-[#0b241c]/90 px-6 py-4 sticky top-0 z-30 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between">
           <div className="flex items-center gap-3">
             <Logo className="w-11 h-11 transition-transform hover:scale-105" />
@@ -256,6 +258,7 @@ export default function Home() {
           setIsPrintOpen(true);
         }}
       />
+      </div>
 
       {/* Modal Proforma Oficial Idéntica a Bicode Control */}
       <BicodeProformaView
