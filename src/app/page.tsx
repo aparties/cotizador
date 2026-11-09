@@ -135,7 +135,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0b241c] text-slate-100 print:bg-white print:p-0 print:m-0">
+    <div className="min-h-screen bg-[#0b241c] text-slate-100 print:min-h-0 print:h-auto print:bg-white print:p-0 print:m-0">
       {/* Contenido de la Aplicación Web (Oculto completamente al Imprimir) */}
       <div className="print:hidden pb-32">
         {/* Header Corporativo Skiz-Style */}

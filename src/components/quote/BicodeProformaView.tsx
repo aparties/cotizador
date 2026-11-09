@@ -93,6 +93,9 @@ export function BicodeProformaView({
             size: A4 portrait;
             margin: 8mm 10mm;
           }
+          *, *:before, *:after {
+            box-sizing: border-box !important;
+          }
           html, body {
             background: white !important;
             background-color: white !important;
@@ -101,19 +104,26 @@ export function BicodeProformaView({
             padding: 0 !important;
             width: 100% !important;
             height: auto !important;
+            min-height: 0 !important;
             overflow: visible !important;
             print-color-adjust: exact !important;
             -webkit-print-color-adjust: exact !important;
+          }
+          #__next, main {
+            height: auto !important;
+            min-height: 0 !important;
           }
           #proforma-modal-container {
             position: static !important;
             inset: auto !important;
             display: block !important;
-            background: white !important;
+            background: transparent !important;
             padding: 0 !important;
             margin: 0 !important;
             max-width: 100% !important;
             width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
             overflow: visible !important;
             box-shadow: none !important;
           }
@@ -124,6 +134,8 @@ export function BicodeProformaView({
             margin: 0 !important;
             max-width: 100% !important;
             width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
             max-height: none !important;
             overflow: visible !important;
           }
@@ -141,7 +153,7 @@ export function BicodeProformaView({
       {/* Contenedor A4 Proporcional */}
       <div
         id="proforma-sheet"
-        className="relative max-h-[95vh] w-full max-w-[210mm] overflow-y-auto rounded-xl bg-white p-8 font-sans text-slate-800 shadow-2xl print:max-h-none print:w-[210mm] print:min-h-[297mm] print:rounded-none print:p-0 print:shadow-none"
+        className="relative max-h-[95vh] w-full max-w-[210mm] overflow-y-auto rounded-xl bg-white p-8 font-sans text-slate-800 shadow-2xl print:max-h-none print:w-full print:max-w-none print:min-h-0 print:h-auto print:rounded-none print:p-0 print:shadow-none print:m-0"
       >
         
         {/* Barra superior de controles (Oculta en Impresión) */}
@@ -327,7 +339,7 @@ export function BicodeProformaView({
         </div>
 
         {/* Bloque Comercial con Campos Editables */}
-        <div className="mt-4 border-t border-slate-300 pt-3 text-[10px] space-y-1.5 text-slate-700">
+        <div className="avoid-break mt-4 border-t border-slate-300 pt-3 text-[10px] space-y-1.5 text-slate-700">
           <div className="grid grid-cols-12 gap-y-1 gap-x-2 items-center">
             
             {/* Plazo de Entrega Editable */}
@@ -425,7 +437,7 @@ export function BicodeProformaView({
         </div>
 
         {/* Footer */}
-        <div className="mt-4 border-t pt-1.5 text-center text-[9px] text-slate-400">
+        <div className="avoid-break mt-3 border-t pt-1.5 text-center text-[9px] text-slate-400">
           Documento emitido desde www.bicodecontrol.com | Cotizador QuickQuote Industrial
         </div>
       </div>

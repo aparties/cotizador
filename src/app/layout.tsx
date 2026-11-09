@@ -21,7 +21,7 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
       </head>
-      <body className="antialiased bg-[#0b241c] text-white min-h-screen">
+      <body className="antialiased bg-[#0b241c] text-white min-h-screen print:min-h-0 print:h-auto print:bg-white print:text-black">
         {children}
       </body>
     </html>
