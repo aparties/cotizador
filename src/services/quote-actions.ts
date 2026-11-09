@@ -141,3 +141,4 @@ export async function getRecentQuotes() {
     return { success: false, quotes: [] };
   }
 }
+
