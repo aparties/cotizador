@@ -119,18 +119,24 @@ export default function Home() {
 
   const handleSaveQuote = async () => {
     setIsSaving(true);
-    const res = await saveQuoteToDatabase({
-      customer: selectedCustomer,
-      globalParams,
-      rawItems,
-    });
-    setIsSaving(false);
+    try {
+      const res = await saveQuoteToDatabase({
+        customer: selectedCustomer,
+        globalParams,
+        rawItems,
+      });
 
-    if (res.success && res.code) {
-      setCurrentQuoteCode(res.code);
-      alert(`✅ ¡Cotización guardada exitosamente en Neon PostgreSQL con código ${res.code}!`);
-    } else {
-      alert(`⚠️ ${res.error || 'No se pudo conectar a Neon. Verifica que la variable DATABASE_URL esté configurada en el archivo .env'}`);
+      if (res.success) {
+        setCurrentQuoteCode(res.code);
+        alert(`✅ ¡Cotización guardada exitosamente en Neon PostgreSQL con código ${res.code}!`);
+      } else {
+        alert(`⚠️ ${res.error || 'No se pudo conectar a Neon. Verifica que la variable DATABASE_URL esté configurada en el archivo .env'}`);
+      }
+    } catch (err: unknown) {
+      console.error('Error al guardar en Neon:', err);
+      alert(`⚠️ Error al guardar: ${err instanceof Error ? err.message : 'Error inesperado al conectar con Neon PostgreSQL'}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
