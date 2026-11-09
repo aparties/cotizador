@@ -1,0 +1,144 @@
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum QuoteOrigin {
+  IMPORTACION
+  NACIONAL
+}
+
+enum QuoteStatus {
+  BORRADOR
+  ENVIADA
+  APROBADA
+  RECHAZADA
+  EXPIRADA
+}
+
+enum ProrationMethod {
+  BY_VALUE
+  BY_UNIT
+}
+
+enum MarginStrategy {
+  MARKUP
+  GROSS_MARGIN
+}
+
+model Customer {
+  id                 String   @id @default(cuid())
+  ruc                String   @unique @db.VarChar(11)
+  businessName       String   @db.VarChar(200)
+  address            String   @db.VarChar(300)
+  phone              String?  @db.VarChar(50)
+  email              String?  @db.VarChar(100)
+  defaultPaymentTerm String   @default("60 DÍAS") @db.VarChar(50)
+  defaultCondition   String   @default("CRÉDITO") @db.VarChar(50)
+  
+  quotes             Quote[]
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@index([ruc])
+  @@index([businessName])
+  @@map("customers")
+}
+
+model Product {
+  id           String   @id @default(cuid())
+  internalCode String   @unique @db.VarChar(50)
+  partNumber   String   @db.VarChar(100)
+  description  String   @default("") @db.Text
+  category     String   @default("REPUESTOS") @db.VarChar(100)
+  brand        String   @default("SIEMENS") @db.VarChar(100)
+  unit         String   @default("UNIDADES") @db.VarChar(30)
+  currency     String   @default("USD") @db.VarChar(10)
+  basePrice    Decimal  @default(0.00) @db.Decimal(12, 4)
+  purchaseCost Decimal  @default(0.00) @db.Decimal(12, 4)
+  
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([partNumber])
+  @@index([category])
+  @@map("products")
+}
+
+model Quote {
+  id                    String          @id @default(cuid())
+  code                  String          @unique @db.VarChar(30)
+  status                QuoteStatus     @default(BORRADOR)
+  origin                QuoteOrigin     @default(IMPORTACION)
+  prorationMethod       ProrationMethod @default(BY_VALUE)
+  marginStrategy        MarginStrategy  @default(MARKUP)
+
+  customerId            String?
+  customer              Customer?       @relation(fields: [customerId], references: [id])
+  clientRuc             String          @db.VarChar(11)
+  clientBusinessName    String          @db.VarChar(200)
+  clientAddress         String          @db.VarChar(300)
+
+  issueDate             DateTime        @default(now())
+  dueDate               DateTime
+  currency              String          @default("DOLARES AMERICANOS") @db.VarChar(30)
+  deliveryTimeDays      String          @default("21 DÍAS") @db.VarChar(50)
+  paymentTerm           String          @default("60 DÍAS") @db.VarChar(50)
+  paymentCondition      String          @default("CRÉDITO") @db.VarChar(50)
+
+  totalIntlFreightUsd   Decimal         @default(0.0000) @db.Decimal(12, 4)
+  totalHandlingUsd      Decimal         @default(0.0000) @db.Decimal(12, 4)
+  exchangeRateValue     Decimal         @db.Decimal(8, 4)
+
+  subtotalGravadoUsd    Decimal         @default(0.0000) @db.Decimal(12, 4)
+  igvAmountUsd          Decimal         @default(0.0000) @db.Decimal(12, 4)
+  totalAmountUsd        Decimal         @default(0.0000) @db.Decimal(12, 4)
+  totalAmountLetters    String          @default("") @db.VarChar(255)
+  totalCostLandedUsd    Decimal         @default(0.0000) @db.Decimal(12, 4)
+  grossProfitUsd        Decimal         @default(0.0000) @db.Decimal(12, 4)
+
+  items                 QuoteItem[]
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  @@map("quotes")
+}
+
+model QuoteItem {
+  id                    String        @id @default(cuid())
+  quoteId               String
+  quote                 Quote         @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  position              Int           @default(1)
+
+  partNumber            String        @db.VarChar(100)
+  description           String        @db.Text
+  quantity              Int           @default(1)
+
+  baseUnitCostUsd       Decimal       @db.Decimal(12, 4)
+  proratedFreightUsd    Decimal       @default(0.0000) @db.Decimal(12, 4)
+  proratedInsuranceUsd  Decimal       @default(0.0000) @db.Decimal(12, 4)
+  adValoremRate         Decimal       @default(0.00) @db.Decimal(5, 2)
+  adValoremAmountUsd    Decimal       @default(0.0000) @db.Decimal(12, 4)
+  proratedExpensesUsd   Decimal       @default(0.0000) @db.Decimal(12, 4)
+
+  landedUnitCostUsd     Decimal       @db.Decimal(12, 4)
+  totalLandedCostUsd    Decimal       @db.Decimal(12, 4)
+
+  marginRatePct         Decimal       @db.Decimal(6, 2)
+  unitSalePriceNetUsd   Decimal       @db.Decimal(12, 4)
+  totalSalePriceNetUsd  Decimal       @db.Decimal(12, 4)
+  totalSalePriceWithIgvUsd Decimal    @db.Decimal(12, 4)
+
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  @@index([quoteId])
+  @@index([partNumber])
+  @@map("quote_items")
+}
