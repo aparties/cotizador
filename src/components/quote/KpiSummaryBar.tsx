@@ -6,9 +6,11 @@ import { TrendingUp, FileSpreadsheet, CheckCircle2 } from 'lucide-react';
 type Props = {
   summary: QuoteSummary;
   onOpenPrint: () => void;
+  onSave?: () => void;
+  isSaving?: boolean;
 };
 
-export function KpiSummaryBar({ summary, onOpenPrint }: Props) {
+export function KpiSummaryBar({ summary, onOpenPrint, onSave, isSaving = false }: Props) {
   return (
     <footer className="fixed bottom-0 left-0 right-0 z-40 border-t border-[#1d4034] bg-[#0b241c]/95 backdrop-blur-lg px-6 py-3">
       <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
@@ -57,10 +59,11 @@ export function KpiSummaryBar({ summary, onOpenPrint }: Props) {
 
           <button
             type="button"
-            onClick={() => alert('¡Cotización lista para emitir y guardar!')}
-            className="flex items-center gap-2 rounded-full bg-[#57cc99] px-7 py-2.5 text-sm font-bold text-[#0b241c] transition-all hover:bg-[#80ed99] shadow-lg"
+            disabled={isSaving}
+            onClick={onSave}
+            className="flex items-center gap-2 rounded-full bg-[#57cc99] px-7 py-2.5 text-sm font-bold text-[#0b241c] transition-all hover:bg-[#80ed99] shadow-lg disabled:opacity-50"
           >
-            <CheckCircle2 className="h-4 w-4" /> Guardar Cotización
+            <CheckCircle2 className="h-4 w-4" /> {isSaving ? 'Guardando en Neon...' : 'Guardar en Base de Datos'}
           </button>
         </div>
       </div>

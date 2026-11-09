@@ -15,12 +15,15 @@ import { QuoteItemsTable } from '@/components/quote/QuoteItemsTable';
 import { KpiSummaryBar } from '@/components/quote/KpiSummaryBar';
 import { BicodeProformaView } from '@/components/quote/BicodeProformaView';
 import { SelectedCustomer } from '@/components/quote/CustomerSelector';
+import { saveQuoteToDatabase } from '@/services/quote-actions';
 import Logo from '@/components/Logo';
 import { Sparkles } from 'lucide-react';
 
 export default function Home() {
   const [isPasteOpen, setIsPasteOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [currentQuoteCode, setCurrentQuoteCode] = useState('0001-0000928');
 
   // Parámetros de Cotización
   const [origin, setOrigin] = useState<CalculationOrigin>('IMPORTACION');
@@ -108,6 +111,23 @@ export default function Home() {
     setRawItems((prev) => [...prev, ...newItems]);
   };
 
+  const handleSaveQuote = async () => {
+    setIsSaving(true);
+    const res = await saveQuoteToDatabase({
+      customer: selectedCustomer,
+      globalParams,
+      rawItems,
+    });
+    setIsSaving(false);
+
+    if (res.success && res.code) {
+      setCurrentQuoteCode(res.code);
+      alert(`✅ ¡Cotización guardada exitosamente en Neon PostgreSQL con código ${res.code}!`);
+    } else {
+      alert(`⚠️ ${res.error || 'No se pudo conectar a Neon. Verifica que la variable DATABASE_URL esté configurada en el archivo .env'}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#0b241c] pb-32 text-slate-100">
       {/* Header Corporativo Skiz-Style */}
@@ -173,6 +193,8 @@ export default function Home() {
       <KpiSummaryBar
         summary={summary}
         onOpenPrint={() => setIsPrintOpen(true)}
+        onSave={handleSaveQuote}
+        isSaving={isSaving}
       />
 
       {/* Modal de Pegado Rápido */}
@@ -188,7 +210,7 @@ export default function Home() {
         onClose={() => setIsPrintOpen(false)}
         summary={summary}
         customer={selectedCustomer}
-        quoteNumber="0001-0000928"
+        quoteNumber={currentQuoteCode}
       />
     </div>
   );
