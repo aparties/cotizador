@@ -6,6 +6,7 @@ import { calculateQuote, RawItemInput, QuoteGlobalParams } from './pricing-engin
 import { numberToLetters } from '@/utils/number-to-letters';
 import { resolvePartDescription } from './part-lookup';
 import { lookupPartsWithGemini } from './gemini-lookup';
+import { CURATED_PARTS, getQuickDescription } from '@/utils/industrial-catalog';
 
 export interface SaveQuoteInput {
   customer: {
@@ -44,13 +45,14 @@ export async function saveQuoteToDatabase(input: SaveQuoteInput): Promise<SaveQu
       (async () => {
         const summary = calculateQuote(input.rawItems, input.globalParams);
 
-        // 1. Obtener correlativo siguiente tipo Bicode Control (0001-0000929...)
+        // 1. Obtener correlativo serie 0002 (para no colisionar con app externa de facturación)
         const lastQuote = await prisma.quote.findFirst({
+          where: { code: { startsWith: '0002-' } },
           orderBy: { createdAt: 'desc' },
           select: { code: true },
         });
 
-        let nextCorrelative = 929;
+        let nextCorrelative = 1;
         if (lastQuote && lastQuote.code) {
           const parts = lastQuote.code.split('-');
           if (parts.length === 2) {
@@ -58,7 +60,7 @@ export async function saveQuoteToDatabase(input: SaveQuoteInput): Promise<SaveQu
             if (!isNaN(num)) nextCorrelative = num + 1;
           }
         }
-        const code = `0001-${nextCorrelative.toString().padStart(7, '0')}`;
+        const code = `0002-${nextCorrelative.toString().padStart(3, '0')}`;
 
         // 2. Buscar o crear cliente por RUC
         let customerId: string | undefined = undefined;
@@ -138,6 +140,43 @@ export async function saveQuoteToDatabase(input: SaveQuoteInput): Promise<SaveQu
         });
 
         revalidatePath('/');
+
+        // Auto-registrar piezas cotizadas en el catálogo general Product de la DB
+        for (const it of summary.items) {
+          if (it.partNumber) {
+            try {
+              const cleanPart = it.partNumber.trim().toUpperCase();
+              const existing = await prisma.product.findFirst({
+                where: { partNumber: cleanPart },
+              });
+              if (existing) {
+                await prisma.product.update({
+                  where: { id: existing.id },
+                  data: {
+                    description: it.description || existing.description,
+                    purchaseCost: it.baseUnitCostUsd > 0 ? it.baseUnitCostUsd : existing.purchaseCost,
+                    basePrice: it.unitSalePriceNetUsd > 0 ? it.unitSalePriceNetUsd : existing.basePrice,
+                  },
+                });
+              } else {
+                await prisma.product.create({
+                  data: {
+                    internalCode: `QUOTED-${Date.now()}-${Math.floor(Math.random() * 10000)}`,
+                    partNumber: cleanPart,
+                    description: it.description,
+                    purchaseCost: it.baseUnitCostUsd,
+                    basePrice: it.unitSalePriceNetUsd,
+                    category: 'REPUESTOS INDUSTRIALES',
+                    brand: cleanPart.startsWith('6ES') || cleanPart.startsWith('6SL') ? 'SIEMENS' : 'ALLEN-BRADLEY',
+                  },
+                });
+              }
+            } catch {
+              // Ignore background catalog update error
+            }
+          }
+        }
+
         // Return only serializable primitives to client
         return {
           success: true,
@@ -224,6 +263,100 @@ export async function batchResolveDescriptions(
     console.error('Error in batchResolveDescriptions:', error);
     return { success: false, items: [] };
   }
+}
+
+export interface AutocompleteProductMatch {
+  partNumber: string;
+  description: string;
+  price: number;
+  source: 'DB' | 'HISTORIAL' | 'CATALOGO';
+  brand?: string;
+  category?: string;
+}
+
+export async function searchProductsAndHistory(query: string): Promise<AutocompleteProductMatch[]> {
+  const clean = query.trim().toUpperCase();
+  if (!clean || clean.length < 2) return [];
+
+  const results: AutocompleteProductMatch[] = [];
+  const seenCodes = new Set<string>();
+
+  // 1. Buscar en la base de datos Neon (Product y QuoteItem)
+  if (process.env.DATABASE_URL) {
+    try {
+      const dbProducts = await prisma.product.findMany({
+        where: {
+          OR: [
+            { partNumber: { contains: clean, mode: 'insensitive' } },
+            { description: { contains: clean, mode: 'insensitive' } },
+          ],
+        },
+        take: 8,
+      });
+
+      for (const p of dbProducts) {
+        const up = p.partNumber.trim().toUpperCase();
+        if (!seenCodes.has(up)) {
+          seenCodes.add(up);
+          results.push({
+            partNumber: p.partNumber,
+            description: p.description || getQuickDescription(p.partNumber),
+            price: Number(p.purchaseCost) || Number(p.basePrice) || 0,
+            source: 'DB',
+            brand: p.brand,
+            category: p.category,
+          });
+        }
+      }
+
+      // Buscar en ítems de cotizaciones guardadas
+      const quoteItems = await prisma.quoteItem.findMany({
+        where: {
+          OR: [
+            { partNumber: { contains: clean, mode: 'insensitive' } },
+            { description: { contains: clean, mode: 'insensitive' } },
+          ],
+        },
+        take: 8,
+        orderBy: { id: 'desc' },
+      });
+
+      for (const q of quoteItems) {
+        const up = q.partNumber.trim().toUpperCase();
+        if (!seenCodes.has(up)) {
+          seenCodes.add(up);
+          results.push({
+            partNumber: q.partNumber,
+            description: q.description,
+            price: Number(q.baseUnitCostUsd) || 0,
+            source: 'HISTORIAL',
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Error querying DB products for autocomplete:', err);
+    }
+  }
+
+  // 2. Complementar con catálogo local curado
+  for (const [code, desc] of Object.entries(CURATED_PARTS)) {
+    if (results.length >= 10) break;
+    const cleanCode = code.toUpperCase();
+    if (cleanCode.includes(clean) || desc.toUpperCase().includes(clean)) {
+      if (!seenCodes.has(cleanCode)) {
+        seenCodes.add(cleanCode);
+        results.push({
+          partNumber: code,
+          description: desc,
+          price: 0,
+          source: 'CATALOGO',
+          brand: code.startsWith('6ES') || code.startsWith('6SL') ? 'SIEMENS' : 'ALLEN-BRADLEY',
+        });
+      }
+    }
+  }
+
+  return results;
 }
 
 

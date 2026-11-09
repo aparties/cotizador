@@ -28,7 +28,7 @@ export default function Home() {
   const [isCashFlowOpen, setIsCashFlowOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [currentQuoteCode, setCurrentQuoteCode] = useState('0001-0000928');
+  const [currentQuoteCode, setCurrentQuoteCode] = useState('0002-001');
 
   // Parámetros de Cotización
   const [origin, setOrigin] = useState<CalculationOrigin>('IMPORTACION');

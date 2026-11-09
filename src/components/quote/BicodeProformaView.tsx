@@ -61,18 +61,12 @@ export function BicodeProformaView({
   // Manejo de Impresión con Nombre de Archivo Estándar Bicode
   const handlePrint = () => {
     const originalTitle = document.title;
-    // Formato exacto requerido: 20603355807-PF-0001-928
-    let cleanCode = quoteNumber.trim().replace(/^PF-?/i, '');
-    const parts = cleanCode.split('-');
-    let formattedCode = cleanCode;
-    if (parts.length === 2) {
-      const serie = parts[0];
-      const num = parseInt(parts[1], 10);
-      if (!isNaN(num)) {
-        formattedCode = `${serie}-${num}`;
-      }
-    }
-    const pdfFileName = `20603355807-PF-${formattedCode}`;
+    // Formato exacto requerido: 20603355807-PF-0002-001
+    const cleanCode = quoteNumber
+      .trim()
+      .replace(/^20603355807-PF-?/i, '')
+      .replace(/^PF-?/i, '');
+    const pdfFileName = `20603355807-PF-${cleanCode}`;
     document.title = pdfFileName;
     window.print();
     setTimeout(() => {

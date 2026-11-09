@@ -129,7 +129,7 @@ export function QuoteItemsTable({
                         onUpdateItem(calc.id, {
                           partNumber: p.partNumber,
                           description: p.description,
-                          baseUnitCostUsd: p.price,
+                          ...(p.price > 0 ? { baseUnitCostUsd: p.price } : {}),
                         });
                       }}
                     />

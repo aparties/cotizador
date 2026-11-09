@@ -67,3 +67,4 @@ Responde ÚNICAMENTE con un JSON válido mapeando cada código con su descripci�
 
   return result;
 }
+
