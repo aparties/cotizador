@@ -139,7 +139,7 @@ export default function Home() {
               <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-2">
                 QuickQuote Industrial
                 <span className="rounded-full bg-[#57cc99]/20 px-2 py-0.5 text-[10px] font-mono font-bold text-[#57cc99]">
-                  Bicode Control S.A.C.
+                  Bicode Control E.I.R.L.
                 </span>
               </h1>
               <p className="text-xs text-[#a8b5b0]">Cálculo Landed Cost & Emisión de Proformas Perú</p>
