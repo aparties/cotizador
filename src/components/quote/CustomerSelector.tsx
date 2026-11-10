@@ -113,9 +113,33 @@ export function CustomerSelector({ selectedCustomer, onSelectCustomer }: Props) 
           <span className="font-mono text-[#57cc99] text-[11px]">{selectedCustomer.ruc ? `RUC ${selectedCustomer.ruc}` : ''}</span>
         </div>
         <p className="text-[11px] text-[#a8b5b0] truncate">{selectedCustomer.address || 'Ingresa dirección fiscal'}</p>
-        <div className="flex gap-4 pt-1 text-[10px] text-slate-400">
-          <span>Condición: <strong className="text-white">{selectedCustomer.paymentCondition}</strong></span>
-          <span>Plazo: <strong className="text-white">{selectedCustomer.paymentTerm}</strong></span>
+        <div className="flex items-center justify-between pt-1 text-[10px] text-slate-400">
+          <div className="flex items-center gap-1.5">
+            <span>Condición:</span>
+            <strong className="text-white">{selectedCustomer.paymentCondition}</strong>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span>Plazo:</span>
+            <select
+              value={selectedCustomer.paymentTerm || '60 DÍAS'}
+              onChange={(e) => {
+                const term = e.target.value;
+                const isCont = term.toUpperCase().includes('CONTADO');
+                onSelectCustomer({
+                  ...selectedCustomer,
+                  paymentTerm: term,
+                  paymentCondition: isCont ? 'CONTADO' : 'CRÉDITO',
+                });
+              }}
+              className="rounded-lg bg-[#143028] border border-[#1d4034] px-2 py-0.5 font-bold text-[#57cc99] text-[10px] focus:outline-none focus:border-[#57cc99] cursor-pointer"
+            >
+              <option value="CONTADO">CONTADO</option>
+              <option value="15 DÍAS">15 DÍAS</option>
+              <option value="30 DÍAS">30 DÍAS</option>
+              <option value="45 DÍAS">45 DÍAS</option>
+              <option value="60 DÍAS">60 DÍAS</option>
+            </select>
+          </div>
         </div>
       </div>
 

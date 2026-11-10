@@ -19,6 +19,32 @@ type Props = {
   currency?: string;
 };
 
+function addDaysToDate(dateStr: string, days: number): string {
+  try {
+    const parts = dateStr.split('-');
+    if (parts.length === 3) {
+      const year = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const day = parseInt(parts[2], 10);
+      const date = new Date(year, month, day);
+      date.setDate(date.getDate() + days);
+      const y = date.getFullYear();
+      const m = String(date.getMonth() + 1).padStart(2, '0');
+      const d = String(date.getDate()).padStart(2, '0');
+      return `${y}-${m}-${d}`;
+    }
+  } catch {
+    // fallback
+  }
+  return dateStr;
+}
+
+function parseDaysFromTerm(term: string): number {
+  if (!term || term.toUpperCase().includes('CONTADO')) return 0;
+  const match = term.match(/\d+/);
+  return match ? parseInt(match[0], 10) : 0;
+}
+
 export function BicodeProformaView({
   isOpen,
   onClose,
@@ -30,21 +56,46 @@ export function BicodeProformaView({
   deliveryTime: initialDeliveryTime = '21 DÍAS',
   currency: initialCurrency = 'DOLARES AMERICANOS',
 }: Props) {
-  // Inicialización de fechas
+  // Inicialización de fechas reactivas según el plazo
+  const initialTerm = customer.paymentTerm || '60 DÍAS';
+  const initialDays = parseDaysFromTerm(initialTerm);
   const todayStr = initialIssueDate || new Date().toISOString().split('T')[0];
-  const dueDefault = new Date();
-  dueDefault.setDate(dueDefault.getDate() + 60);
-  const dueStr = initialDueDate || dueDefault.toISOString().split('T')[0];
+  const calculatedInitialDue = initialDueDate || (initialDays > 0 ? addDaysToDate(todayStr, initialDays) : todayStr);
 
   // Estados locales editables en vivo
   const [quoteNumber, setQuoteNumber] = useState(initialQuoteNumber);
   const [issueDate, setIssueDate] = useState(todayStr);
-  const [dueDate, setDueDate] = useState(dueStr);
+  const [dueDate, setDueDate] = useState(calculatedInitialDue);
   const [deliveryTime, setDeliveryTime] = useState(initialDeliveryTime);
   const [currency, setCurrency] = useState(initialCurrency);
-  const [paymentTerm, setPaymentTerm] = useState(customer.paymentTerm || '60 DÍAS');
-  const [paymentCondition, setPaymentCondition] = useState(customer.paymentCondition || 'CRÉDITO');
+  const [paymentTerm, setPaymentTerm] = useState(initialTerm);
+  const [paymentCondition, setPaymentCondition] = useState(
+    customer.paymentCondition || (initialDays > 0 ? 'CRÉDITO' : 'CONTADO')
+  );
   const [showTariffCodes, setShowTariffCodes] = useState(true);
+
+  // Handlers reactivos para sincronizar Plazo de Pago con Fecha de Vencimiento y Detalle Crédito
+  const handlePaymentTermChange = (newTerm: string) => {
+    setPaymentTerm(newTerm);
+    const days = parseDaysFromTerm(newTerm);
+    if (newTerm.toUpperCase().includes('CONTADO') || days === 0) {
+      setPaymentCondition('CONTADO');
+      setDueDate(issueDate);
+    } else {
+      setPaymentCondition('CRÉDITO');
+      setDueDate(addDaysToDate(issueDate, days));
+    }
+  };
+
+  const handleIssueDateChange = (newIssueDate: string) => {
+    setIssueDate(newIssueDate);
+    const days = parseDaysFromTerm(paymentTerm);
+    if (days > 0) {
+      setDueDate(addDaysToDate(newIssueDate, days));
+    } else if (paymentCondition.toUpperCase().includes('CONTADO')) {
+      setDueDate(newIssueDate);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -240,7 +291,7 @@ export function BicodeProformaView({
             <input
               type="text"
               value={issueDate}
-              onChange={(e) => setIssueDate(e.target.value)}
+              onChange={(e) => handleIssueDateChange(e.target.value)}
               className="font-mono bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none w-28 text-slate-900"
             />
           </div>
@@ -374,12 +425,30 @@ export function BicodeProformaView({
             {/* Plazo de Pago Editable */}
             <div className="col-span-3 font-bold text-slate-900">PLAZO DE PAGO</div>
             <div className="col-span-9 font-medium">
-              <input
-                type="text"
-                value={paymentTerm}
-                onChange={(e) => setPaymentTerm(e.target.value)}
-                className="w-full bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none text-slate-800"
-              />
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  type="text"
+                  value={paymentTerm}
+                  onChange={(e) => handlePaymentTermChange(e.target.value)}
+                  className="w-40 bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none text-slate-800 uppercase"
+                />
+                <div className="flex flex-wrap gap-1 print:hidden text-[10px]">
+                  {['CONTADO', '15 DÍAS', '30 DÍAS', '45 DÍAS', '60 DÍAS'].map((term) => (
+                    <button
+                      key={term}
+                      type="button"
+                      onClick={() => handlePaymentTermChange(term)}
+                      className={`rounded px-2 py-0.5 border transition-all ${
+                        paymentTerm.toUpperCase() === term
+                          ? 'bg-[#1b5e54] text-white border-[#1b5e54] font-bold shadow-sm'
+                          : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
+                      }`}
+                    >
+                      {term}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {/* Condición de Pago Editable */}
@@ -391,20 +460,17 @@ export function BicodeProformaView({
                 onChange={(e) => {
                   const val = e.target.value;
                   setPaymentCondition(val);
-                  if (val.toUpperCase().includes('CONTADO') && paymentTerm.includes('DÍAS')) {
-                    setPaymentTerm('CONTADO');
+                  if (val.toUpperCase().includes('CONTADO')) {
+                    handlePaymentTermChange('CONTADO');
                   }
                 }}
-                className="w-44 bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none text-slate-900 font-bold uppercase"
+                className="w-40 bg-transparent border-b border-dashed border-slate-300 hover:border-slate-800 focus:outline-none print:border-none text-slate-900 font-bold uppercase"
               />
               <div className="flex gap-1 print:hidden text-[10px]">
                 <button
                   type="button"
-                  onClick={() => {
-                    setPaymentCondition('CONTADO');
-                    setPaymentTerm('CONTADO');
-                  }}
-                  className={`rounded px-2 py-0.5 border transition-all ${
+                  onClick={() => handlePaymentTermChange('CONTADO')}
+                  className={`rounded px-2.5 py-0.5 border transition-all ${
                     isContado ? 'bg-emerald-700 text-white border-emerald-700 font-bold' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
                   }`}
                 >
@@ -413,10 +479,10 @@ export function BicodeProformaView({
                 <button
                   type="button"
                   onClick={() => {
-                    setPaymentCondition('CRÉDITO');
-                    setPaymentTerm('60 DÍAS');
+                    const currentDays = parseDaysFromTerm(paymentTerm);
+                    handlePaymentTermChange(currentDays > 0 ? paymentTerm : '15 DÍAS');
                   }}
-                  className={`rounded px-2 py-0.5 border transition-all ${
+                  className={`rounded px-2.5 py-0.5 border transition-all ${
                     !isContado ? 'bg-[#1b5e54] text-white border-[#1b5e54] font-bold' : 'bg-slate-100 text-slate-600 border-slate-200 hover:bg-slate-200'
                   }`}
                 >
