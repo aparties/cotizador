@@ -76,25 +76,51 @@ export function QuoteHeaderConfig({
 
         <div className="grid grid-cols-2 gap-2.5">
           <div>
-            <label className="text-[10px] font-semibold text-[#57cc99]">FLETE TOTAL (USD)</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-semibold text-[#57cc99]">
+                {origin === 'NACIONAL' ? 'FLETE LOCAL (USD)' : 'FLETE TOTAL (USD)'}
+              </label>
+              {origin === 'NACIONAL' && (
+                <span className="text-[9px] font-bold text-amber-400 bg-amber-950/60 border border-amber-500/30 px-1.5 py-0.5 rounded-md">
+                  $0 Local
+                </span>
+              )}
+            </div>
             <input
               type="number"
               step="any"
-              value={totalFreightUsd === 0 ? '' : totalFreightUsd}
+              value={totalFreightUsd === 0 ? (origin === 'NACIONAL' ? 0 : '') : totalFreightUsd}
               onChange={(e) => onFreightChange(parseFloat(e.target.value) || 0)}
               placeholder="0.00"
-              className="w-full rounded-2xl border border-[#1d4034] bg-[#081a14] px-4 py-2 text-xs font-mono text-white focus:border-[#57cc99] focus:outline-none"
+              className={`w-full rounded-2xl border px-4 py-2 text-xs font-mono text-white focus:border-[#57cc99] focus:outline-none transition-all ${
+                origin === 'NACIONAL'
+                  ? 'border-[#1d4034]/80 bg-[#081a14]/60 text-slate-300'
+                  : 'border-[#1d4034] bg-[#081a14]'
+              }`}
             />
           </div>
           <div>
-            <label className="text-[10px] font-semibold text-[#57cc99]">GASTOS ADUANA/AGENTE</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-[10px] font-semibold text-[#57cc99]">
+                {origin === 'NACIONAL' ? 'DESADUANAJE / AGENTE' : 'GASTOS ADUANA/AGENTE'}
+              </label>
+              {origin === 'NACIONAL' && (
+                <span className="text-[9px] font-bold text-amber-400 bg-amber-950/60 border border-amber-500/30 px-1.5 py-0.5 rounded-md">
+                  $0 Sin Aduana
+                </span>
+              )}
+            </div>
             <input
               type="number"
               step="any"
-              value={totalHandlingUsd === 0 ? '' : totalHandlingUsd}
+              value={totalHandlingUsd === 0 ? (origin === 'NACIONAL' ? 0 : '') : totalHandlingUsd}
               onChange={(e) => onHandlingChange(parseFloat(e.target.value) || 0)}
               placeholder="0.00"
-              className="w-full rounded-2xl border border-[#1d4034] bg-[#081a14] px-4 py-2 text-xs font-mono text-white focus:border-[#57cc99] focus:outline-none"
+              className={`w-full rounded-2xl border px-4 py-2 text-xs font-mono text-white focus:border-[#57cc99] focus:outline-none transition-all ${
+                origin === 'NACIONAL'
+                  ? 'border-[#1d4034]/80 bg-[#081a14]/60 text-slate-300'
+                  : 'border-[#1d4034] bg-[#081a14]'
+              }`}
             />
           </div>
         </div>

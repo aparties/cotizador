@@ -83,6 +83,8 @@ export const CodeGeneratorModal: React.FC<Props> = ({
         description: g.description,
         quantity: g.quantity,
         baseUnitCostUsd: g.convertedPriceUsd,
+        baseUnitCostPen: currency === 'PEN' ? g.originalPrice : Number((g.convertedPriceUsd * (exchangeRate || 3.765)).toFixed(2)),
+        currencyCost: currency,
         adValoremRate: tariff.adValoremRate,
         hsCode: tariff.hsCode,
         marginRatePct: 45,

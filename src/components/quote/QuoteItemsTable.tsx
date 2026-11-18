@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CalculatedItem, RawItemInput, MARGIN_PROFILES } from '@/services/pricing-engine';
+import { CalculatedItem, RawItemInput, MARGIN_PROFILES, CalculationOrigin } from '@/services/pricing-engine';
 import { Trash2, Plus, Check } from 'lucide-react';
 import { ProductAutocomplete } from './ProductAutocomplete';
 import { classifySunatTariff } from '@/utils/sunat-tariffs';
@@ -13,6 +13,10 @@ type Props = {
   onDeleteItem: (id: string) => void;
   onAddItem: () => void;
   onApplyBulkMargin: (marginPct: number) => void;
+  origin?: CalculationOrigin;
+  exchangeRatePen?: number;
+  costCurrency?: 'USD' | 'PEN';
+  onCostCurrencyChange?: (curr: 'USD' | 'PEN') => void;
 };
 
 export function QuoteItemsTable({
@@ -22,6 +26,10 @@ export function QuoteItemsTable({
   onDeleteItem,
   onAddItem,
   onApplyBulkMargin,
+  origin = 'IMPORTACION',
+  exchangeRatePen = 3.765,
+  costCurrency = 'USD',
+  onCostCurrencyChange,
 }: Props) {
   const [customMarkup, setCustomMarkup] = useState('');
 
@@ -106,7 +114,41 @@ export function QuoteItemsTable({
               <th className="pb-3 pl-2 w-48">Part Number (Autocompleta)</th>
               <th className="pb-3">Descripción Técnica</th>
               <th className="pb-3 text-center w-20">Cant.</th>
-              <th className="pb-3 w-28">Costo FOB</th>
+              <th className="pb-3 w-36">
+                <div className="flex items-center justify-between pr-2">
+                  <span title={origin === 'NACIONAL' ? 'Costo de Compra Local' : 'Costo FOB Unitario'}>
+                    {origin === 'NACIONAL' ? 'Costo Local' : 'Costo FOB'}
+                  </span>
+                  {onCostCurrencyChange && (
+                    <div className="flex rounded-lg bg-[#081a14] p-0.5 border border-[#1d4034] ml-1">
+                      <button
+                        type="button"
+                        onClick={() => onCostCurrencyChange('USD')}
+                        className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-colors ${
+                          costCurrency === 'USD'
+                            ? 'bg-[#57cc99] text-[#0b241c]'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Ver y editar costos en Dólares ($)"
+                      >
+                        $
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => onCostCurrencyChange('PEN')}
+                        className={`px-1.5 py-0.5 text-[9px] font-bold rounded transition-colors ${
+                          costCurrency === 'PEN'
+                            ? 'bg-[#57cc99] text-[#0b241c]'
+                            : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Ver y editar costos en Soles (S/.)"
+                      >
+                        S/
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </th>
               <th className="pb-3 w-20">Arancel</th>
               <th className="pb-3 w-28">Landed Unit</th>
               <th className="pb-3 w-24">% Margen</th>
@@ -119,6 +161,23 @@ export function QuoteItemsTable({
             {calculatedItems.map((calc) => {
               const raw = rawItems.find((r) => r.id === calc.id);
               if (!raw) return null;
+
+              const itemCurrency =
+                raw.currencyCost || costCurrency || (origin === 'NACIONAL' ? 'PEN' : 'USD');
+              const rate = exchangeRatePen || 3.765;
+
+              const displayVal =
+                itemCurrency === 'PEN'
+                  ? raw.baseUnitCostPen !== undefined
+                    ? raw.baseUnitCostPen === 0
+                      ? ''
+                      : raw.baseUnitCostPen
+                    : raw.baseUnitCostUsd === 0
+                    ? ''
+                    : Number((raw.baseUnitCostUsd * rate).toFixed(2))
+                  : raw.baseUnitCostUsd === 0
+                  ? ''
+                  : raw.baseUnitCostUsd;
 
               return (
                 <tr key={calc.id} className="group hover:bg-[#081a14]/40 transition-colors">
@@ -174,37 +233,97 @@ export function QuoteItemsTable({
                   </td>
 
                   <td className="py-2.5">
-                    <div className="relative">
-                      <span className="absolute left-2.5 top-1.5 text-[10px] text-[#a8b5b0]">$</span>
-                      <input
-                        type="number"
-                        step="any"
-                        value={raw.baseUnitCostUsd === 0 ? '' : raw.baseUnitCostUsd}
-                        onChange={(e) => onUpdateItem(calc.id, { baseUnitCostUsd: parseFloat(e.target.value) || 0 })}
-                        className="w-24 rounded-xl border border-[#1d4034] bg-[#081a14] pl-6 pr-2 py-1 font-mono text-white focus:border-[#57cc99] focus:outline-none"
-                      />
+                    <div className="flex flex-col gap-0.5">
+                      <div className="relative flex items-center">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextCurr = itemCurrency === 'PEN' ? 'USD' : 'PEN';
+                            if (nextCurr === 'PEN') {
+                              const penVal =
+                                raw.baseUnitCostPen !== undefined
+                                  ? raw.baseUnitCostPen
+                                  : Number((raw.baseUnitCostUsd * rate).toFixed(2));
+                              onUpdateItem(calc.id, { currencyCost: 'PEN', baseUnitCostPen: penVal });
+                            } else {
+                              onUpdateItem(calc.id, { currencyCost: 'USD' });
+                            }
+                          }}
+                          className={`absolute left-1.5 z-10 rounded px-1 text-[10px] font-bold transition-all ${
+                            itemCurrency === 'PEN'
+                              ? 'bg-[#57cc99]/20 text-[#57cc99] hover:bg-[#57cc99]/40'
+                              : 'bg-slate-700/50 text-slate-300 hover:bg-slate-700'
+                          }`}
+                          title={`Costo en ${itemCurrency === 'PEN' ? 'Soles (S/.)' : 'Dólares ($)'}. Clic para cambiar.`}
+                        >
+                          {itemCurrency === 'PEN' ? 'S/' : '$'}
+                        </button>
+                        <input
+                          type="number"
+                          step="any"
+                          value={displayVal}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value) || 0;
+                            if (itemCurrency === 'PEN') {
+                              onUpdateItem(calc.id, {
+                                baseUnitCostPen: val,
+                                baseUnitCostUsd: Number((val / rate).toFixed(4)),
+                                currencyCost: 'PEN',
+                              });
+                            } else {
+                              onUpdateItem(calc.id, {
+                                baseUnitCostUsd: val,
+                                baseUnitCostPen: Number((val * rate).toFixed(2)),
+                                currencyCost: 'USD',
+                              });
+                            }
+                          }}
+                          placeholder="0.00"
+                          className="w-28 rounded-xl border border-[#1d4034] bg-[#081a14] pl-9 pr-2 py-1 font-mono text-white text-xs focus:border-[#57cc99] focus:outline-none"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-[#a8b5b0] pl-1">
+                        {itemCurrency === 'PEN'
+                          ? raw.baseUnitCostUsd > 0
+                            ? `≈ $${raw.baseUnitCostUsd.toFixed(2)} USD`
+                            : ''
+                          : raw.baseUnitCostUsd > 0
+                          ? `≈ S/ ${(raw.baseUnitCostUsd * rate).toFixed(2)}`
+                          : ''}
+                      </span>
                     </div>
                   </td>
 
                   <td className="py-2.5">
-                    <div className="flex flex-col items-start gap-0.5">
-                      <select
-                        value={raw.adValoremRate}
-                        onChange={(e) => onUpdateItem(calc.id, { adValoremRate: parseFloat(e.target.value) })}
-                        className="rounded-xl border border-[#1d4034] bg-[#081a14] px-2 py-1 text-xs text-white focus:outline-none"
-                        title="Tasa Arancelaria Ad-Valorem SUNAT"
-                      >
-                        <option value={0}>0%</option>
-                        <option value={6}>6%</option>
-                        <option value={11}>11%</option>
-                      </select>
-                      <span
-                        className="text-[9px] font-mono text-[#57cc99]/80 truncate max-w-[85px] cursor-help"
-                        title={`Partida Arancelaria SUNAT: ${calc.hsCode}`}
-                      >
-                        {calc.hsCode}
-                      </span>
-                    </div>
+                    {origin === 'NACIONAL' ? (
+                      <div className="flex flex-col items-start gap-0.5">
+                        <span className="rounded-lg border border-[#1d4034]/70 bg-[#081a14]/60 px-2 py-1 text-[11px] font-mono text-slate-400">
+                          0%
+                        </span>
+                        <span className="text-[9px] font-mono text-[#57cc99]/70">
+                          Local (Sin arancel)
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-start gap-0.5">
+                        <select
+                          value={raw.adValoremRate}
+                          onChange={(e) => onUpdateItem(calc.id, { adValoremRate: parseFloat(e.target.value) })}
+                          className="rounded-xl border border-[#1d4034] bg-[#081a14] px-2 py-1 text-xs text-white focus:outline-none"
+                          title="Tasa Arancelaria Ad-Valorem SUNAT"
+                        >
+                          <option value={0}>0%</option>
+                          <option value={6}>6%</option>
+                          <option value={11}>11%</option>
+                        </select>
+                        <span
+                          className="text-[9px] font-mono text-[#57cc99]/80 truncate max-w-[85px] cursor-help"
+                          title={`Partida Arancelaria SUNAT: ${calc.hsCode}`}
+                        >
+                          {calc.hsCode}
+                        </span>
+                      </div>
+                    )}
                   </td>
 
                   <td className="py-2.5">
@@ -212,7 +331,7 @@ export function QuoteItemsTable({
                       ${calc.landedUnitCostUsd.toFixed(2)}
                     </span>
                     <span className="block text-[10px] text-[#a8b5b0]">
-                      flete: +${calc.proratedFreightUnitUsd.toFixed(2)}
+                      {origin === 'NACIONAL' ? 'compra local (sin flete)' : `flete: +$${calc.proratedFreightUnitUsd.toFixed(2)}`}
                     </span>
                   </td>
 

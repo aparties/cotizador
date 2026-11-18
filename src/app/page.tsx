@@ -37,6 +37,7 @@ export default function Home() {
 
   // Parámetros de Cotización
   const [origin, setOrigin] = useState<CalculationOrigin>('IMPORTACION');
+  const [costCurrency, setCostCurrency] = useState<'USD' | 'PEN'>('USD');
   const [prorationMethod, setProrationMethod] = useState<ProrationType>('BY_VALUE');
   const [marginStrategy, setMarginStrategy] = useState<MarginType>('MARKUP');
   const [totalFreightUsd, setTotalFreightUsd] = useState(120.0);
@@ -90,6 +91,64 @@ export default function Home() {
   const summary = useMemo(() => calculateQuote(rawItems, globalParams), [rawItems, globalParams]);
 
   // Handlers
+  const handleOriginChange = (newOrigin: CalculationOrigin) => {
+    setOrigin(newOrigin);
+    if (newOrigin === 'NACIONAL') {
+      setTotalFreightUsd(0);
+      setTotalHandlingUsd(0);
+      setCostCurrency('PEN');
+      setRawItems((prev) =>
+        prev.map((it) => ({
+          ...it,
+          currencyCost: 'PEN',
+          baseUnitCostPen:
+            it.baseUnitCostPen !== undefined
+              ? it.baseUnitCostPen
+              : Number((it.baseUnitCostUsd * exchangeRatePen).toFixed(2)),
+        }))
+      );
+    } else {
+      if (totalFreightUsd === 0) setTotalFreightUsd(120.0);
+      if (totalHandlingUsd === 0) setTotalHandlingUsd(50.0);
+      setCostCurrency('USD');
+      setRawItems((prev) =>
+        prev.map((it) => ({
+          ...it,
+          currencyCost: 'USD',
+        }))
+      );
+    }
+  };
+
+  const handleCostCurrencyChange = (curr: 'USD' | 'PEN') => {
+    setCostCurrency(curr);
+    setRawItems((prev) =>
+      prev.map((it) => ({
+        ...it,
+        currencyCost: curr,
+        baseUnitCostPen:
+          it.baseUnitCostPen !== undefined
+            ? it.baseUnitCostPen
+            : Number((it.baseUnitCostUsd * exchangeRatePen).toFixed(2)),
+      }))
+    );
+  };
+
+  const handleExchangeRateChange = (newRate: number) => {
+    setExchangeRatePen(newRate);
+    setRawItems((prev) =>
+      prev.map((it) => {
+        if (it.currencyCost === 'PEN' && it.baseUnitCostPen !== undefined) {
+          return {
+            ...it,
+            baseUnitCostUsd: Number((it.baseUnitCostPen / (newRate || 3.765)).toFixed(4)),
+          };
+        }
+        return it;
+      })
+    );
+  };
+
   const handleUpdateItem = (id: string, updates: Partial<RawItemInput>) => {
     setRawItems((prev) => prev.map((item) => (item.id === id ? { ...item, ...updates } : item)));
   };
@@ -215,7 +274,7 @@ export default function Home() {
           {/* Parámetros & Cliente */}
           <QuoteHeaderConfig
             origin={origin}
-            onOriginChange={setOrigin}
+            onOriginChange={handleOriginChange}
             prorationMethod={prorationMethod}
             onProrationChange={setProrationMethod}
             marginStrategy={marginStrategy}
@@ -225,7 +284,7 @@ export default function Home() {
             totalHandlingUsd={totalHandlingUsd}
             onHandlingChange={setTotalHandlingUsd}
             exchangeRatePen={exchangeRatePen}
-            onExchangeRateChange={setExchangeRatePen}
+            onExchangeRateChange={handleExchangeRateChange}
             selectedCustomer={selectedCustomer}
             onSelectCustomer={setSelectedCustomer}
           />
@@ -238,6 +297,10 @@ export default function Home() {
             onDeleteItem={handleDeleteItem}
             onAddItem={handleAddItem}
             onApplyBulkMargin={handleApplyBulkMargin}
+            origin={origin}
+            exchangeRatePen={exchangeRatePen}
+            costCurrency={costCurrency}
+            onCostCurrencyChange={handleCostCurrencyChange}
           />
         </main>
 

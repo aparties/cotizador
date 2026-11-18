@@ -11,6 +11,8 @@ export interface RawItemInput {
   description: string;
   quantity: number;
   baseUnitCostUsd: number;
+  baseUnitCostPen?: number; // Costo ingresado en Soles (PEN S/.)
+  currencyCost?: 'USD' | 'PEN'; // Moneda en la que se ingresó el costo
   adValoremRate: number; // 0, 6 o 11
   hsCode?: string;       // Subpartida Nacional SUNAT (ej: 8537.10.90.00)
   marginRatePct: number; // Ej: 45 para 45%
