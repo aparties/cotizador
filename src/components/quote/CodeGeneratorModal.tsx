@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Wand2,
   Copy,
@@ -10,12 +10,17 @@ import {
   Sparkles,
   DollarSign,
   Coins,
-  RefreshCw,
-  FileSpreadsheet,
+  Camera,
+  ImageIcon,
+  Loader2,
+  UploadCloud,
+  Trash2,
+  AlertCircle,
 } from 'lucide-react';
 import { processRawQuoteToQuickPaste, GeneratedCodeItem } from '@/utils/code-generator';
 import { RawItemInput } from '@/services/pricing-engine';
 import { classifySunatTariff } from '@/utils/sunat-tariffs';
+import { extractQuoteFromImage } from '@/services/gemini-ocr';
 
 interface Props {
   isOpen: boolean;
@@ -40,6 +45,14 @@ export const CodeGeneratorModal: React.FC<Props> = ({
   const [currency, setCurrency] = useState<'PEN' | 'USD'>('PEN');
   const [exchangeRate, setExchangeRate] = useState<number>(defaultExchangeRate);
   const [copied, setCopied] = useState(false);
+
+  // Estados de Imagen y Gemini Vision
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageName, setImageName] = useState<string>('');
+  const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
+  const [imageError, setImageError] = useState<string | null>(null);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Proceso reactivo en tiempo real
   const generatedItems: GeneratedCodeItem[] = useMemo(() => {
@@ -80,8 +93,81 @@ export const CodeGeneratorModal: React.FC<Props> = ({
     onClose();
   };
 
+  // Función para procesar imagen con Gemini Vision
+  const processImageFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) {
+      setImageError('El archivo debe ser una imagen válida (PNG, JPG, WEBP).');
+      return;
+    }
+
+    setImageName(file.name);
+    setImageError(null);
+    setIsAnalyzingImage(true);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const dataUrl = reader.result as string;
+          setImagePreview(dataUrl);
+
+          const res = await extractQuoteFromImage(dataUrl, file.type, currency, exchangeRate || 3.765);
+
+          if (res.success && res.items.length > 0) {
+            // Actualizar el texto de entrada con el texto formateado
+            const newText = res.items.map((it) => it.formattedLine).join('\n');
+            setInputText(newText);
+          } else {
+            setImageError(res.error || 'No se pudieron detectar ítems en la imagen. Intenta con una foto más nítida.');
+          }
+        } catch (err: unknown) {
+          setImageError(err instanceof Error ? err.message : 'Error al procesar la imagen con Gemini.');
+        } finally {
+          setIsAnalyzingImage(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err: unknown) {
+      setImageError(err instanceof Error ? err.message : 'Error al leer el archivo de imagen.');
+      setIsAnalyzingImage(false);
+    }
+  };
+
+  // Manejo de pegado directo desde portapapeles (Ctrl + V de foto)
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          processImageFile(file);
+          return;
+        }
+      }
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      processImageFile(e.target.files[0]);
+    }
+  };
+
+  const clearImage = () => {
+    setImagePreview(null);
+    setImageName('');
+    setImageError(null);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
+    <div
+      onPaste={handlePaste}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4"
+    >
       <div className="w-full max-w-4xl max-h-[92vh] flex flex-col rounded-3xl border border-[#1d4034] bg-[#0e2a21] shadow-2xl text-slate-100 animate-in fade-in zoom-in-95 duration-150">
         
         {/* Header */}
@@ -94,11 +180,11 @@ export const CodeGeneratorModal: React.FC<Props> = ({
               <h2 className="text-base font-bold text-white flex items-center gap-2">
                 Generador de Códigos & Conversor Soles ➔ Dólares
                 <span className="rounded-full bg-[#57cc99]/20 px-2 py-0.5 text-[10px] font-mono text-[#57cc99]">
-                  Quick Paste Helper
+                  IA Gemini Vision + OCR
                 </span>
               </h2>
               <p className="text-xs text-[#a8b5b0]">
-                Crea códigos SKU automáticos a partir de descripciones y convierte cotizaciones en Soles a USD
+                Pega texto o <strong>sube/pega una foto (Ctrl+V)</strong> de la cotización para extraer ítems automáticamente
               </p>
             </div>
           </div>
@@ -158,17 +244,81 @@ export const CodeGeneratorModal: React.FC<Props> = ({
             )}
           </div>
 
-          <button
-            type="button"
-            onClick={() => {
-              setInputText(SAMPLE_TEXT);
-              setCurrency('PEN');
-            }}
-            className="flex items-center gap-1 text-[11px] text-[#57cc99] hover:underline cursor-pointer"
-          >
-            <Sparkles className="h-3 w-3" /> Cargar ejemplo (Caja, Líquid Tight, Cables)
-          </button>
+          <div className="flex items-center gap-3">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1.5 rounded-xl bg-[#081a14] border border-[#57cc99]/40 px-3 py-1 text-xs font-semibold text-[#80ed99] hover:bg-[#57cc99] hover:text-[#0b241c] transition-all shadow-sm"
+              title="Selecciona o toma una foto de la proforma o cotización"
+            >
+              <Camera className="h-3.5 w-3.5" /> Pegar o Subir Foto
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setInputText(SAMPLE_TEXT);
+                setCurrency('PEN');
+              }}
+              className="flex items-center gap-1 text-[11px] text-[#57cc99] hover:underline cursor-pointer"
+            >
+              <Sparkles className="h-3 w-3" /> Cargar ejemplo
+            </button>
+          </div>
         </div>
+
+        {/* Alerta de análisis de imagen o error */}
+        {isAnalyzingImage && (
+          <div className="bg-[#143028] border-b border-[#57cc99]/40 px-6 py-2.5 flex items-center gap-3 text-xs text-[#80ed99]">
+            <Loader2 className="h-4 w-4 animate-spin text-[#57cc99]" />
+            <span>
+              <strong>Gemini Vision está analizando la imagen ({imageName})...</strong> Leyendo ítems, cantidades y precios...
+            </span>
+          </div>
+        )}
+
+        {imageError && (
+          <div className="bg-red-950/60 border-b border-red-500/30 px-6 py-2 flex items-center justify-between text-xs text-red-300">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 text-red-400" />
+              <span>{imageError}</span>
+            </div>
+            <button onClick={() => setImageError(null)} className="text-red-400 hover:text-white">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Vista previa de imagen si fue cargada */}
+        {imagePreview && (
+          <div className="bg-[#081a14] border-b border-[#1d4034] px-6 py-2 flex items-center justify-between text-xs">
+            <div className="flex items-center gap-3">
+              <img
+                src={imagePreview}
+                alt="Foto de Cotización"
+                className="h-10 w-14 object-cover rounded-lg border border-[#1d4034]"
+              />
+              <div>
+                <p className="font-semibold text-white truncate max-w-xs">{imageName || 'Imagen pegada desde portapapeles'}</p>
+                <p className="text-[10px] text-[#57cc99]">Extraída con éxito mediante Gemini Vision</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={clearImage}
+              className="flex items-center gap-1 text-slate-400 hover:text-red-400 text-xs transition-colors"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Quitar imagen
+            </button>
+          </div>
+        )}
 
         {/* Contenido en 2 Columnas */}
         <div className="flex-1 overflow-y-auto p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -177,7 +327,7 @@ export const CodeGeneratorModal: React.FC<Props> = ({
           <div className="flex flex-col space-y-2">
             <div className="flex items-center justify-between">
               <label className="text-xs font-bold text-white flex items-center gap-1.5">
-                <span>1. Pega aquí el texto crudo o Excel del proveedor</span>
+                <span>1. Texto crudo o pega una captura (Ctrl + V)</span>
               </label>
               <span className="text-[10px] text-slate-400">
                 Líneas: {inputText.split('\n').filter(Boolean).length}
@@ -188,13 +338,20 @@ export const CodeGeneratorModal: React.FC<Props> = ({
               rows={12}
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder={`Pega texto de WhatsApp, PDF o columnas de Excel:\n\nCAJA DE PASO ALUMINIO PESADO 10X10X4MM - 2pcs - S/ 22.95\nFINAL DE CARRERA TELEMECANIQUE XCKJ10541H29C - 1pcs - S/ 177.89\nCONECTOR RECTO LIQUID TIGHT 1/2" - 4pcs - S/ 4.59\nCABLE GPT #18AWG - 1pcs - S/ 86.08`}
+              placeholder={`Puedes pegar texto normal, columnas de Excel o presionar Ctrl + V para PEGAR UNA FOTO de la cotización:\n\nCAJA DE PASO ALUMINIO PESADO 10X10X4MM - 2pcs - S/ 22.95\nFINAL DE CARRERA TELEMECANIQUE XCKJ10541H29C - 1pcs - S/ 177.89\nCONECTOR RECTO LIQUID TIGHT 1/2" - 4pcs - S/ 4.59\nCABLE GPT #18AWG - 1pcs - S/ 86.08`}
               className="flex-1 w-full rounded-2xl border border-[#1d4034] bg-[#081a14] p-3.5 font-mono text-xs text-white placeholder-slate-600 focus:border-[#57cc99] focus:outline-none resize-none leading-relaxed"
             />
             
-            <p className="text-[10px] text-[#a8b5b0] leading-tight">
-              💡 <strong>Tip:</strong> Puedes pegar filas copiadas directamente de Excel con columnas separadas por tabuladores, o listas con guiones y precios en Soles o Dólares.
-            </p>
+            <div className="flex items-center justify-between text-[10px] text-[#a8b5b0]">
+              <span>💡 Presiona <strong>Ctrl + V</strong> en cualquier momento con una captura de pantalla</span>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="text-[#57cc99] hover:underline cursor-pointer"
+              >
+                o sube un archivo
+              </button>
+            </div>
           </div>
 
           {/* Panel Derecho: Salida Formateada para Quick Paste */}

@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { parseQuickInput } from '@/utils/quote-parser';
 import { RawItemInput } from '@/services/pricing-engine';
 import { batchResolveDescriptions } from '@/services/quote-actions';
 import { classifySunatTariff } from '@/utils/sunat-tariffs';
-import { Clipboard, Loader2, Sparkles, X, Globe2, Wand2, DollarSign, Coins } from 'lucide-react';
+import { extractQuoteFromImage } from '@/services/gemini-ocr';
+import { Clipboard, Loader2, Sparkles, X, Globe2, Wand2, DollarSign, Coins, Camera } from 'lucide-react';
 
 type Props = {
   isOpen: boolean;
@@ -27,8 +28,61 @@ export function QuickPasteModal({
   const [exchangeRate, setExchangeRate] = useState<number>(defaultExchangeRate);
   const [isResolving, setIsResolving] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   if (!isOpen) return null;
+
+  const processImageFile = async (file: File) => {
+    if (!file.type.startsWith('image/')) return;
+    setIsResolving(true);
+    setStatusMessage('Analizando foto con IA Gemini Vision...');
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const res = await extractQuoteFromImage(
+            reader.result as string,
+            file.type,
+            currency,
+            exchangeRate || 3.765
+          );
+
+          if (res.success && res.items.length > 0) {
+            const lines = res.items.map((it) => it.formattedLine).join('\n');
+            setText((prev) => (prev.trim() ? `${prev.trim()}\n${lines}` : lines));
+          } else {
+            alert(res.error || 'No se pudieron extraer ítems de la foto.');
+          }
+        } catch (err: unknown) {
+          alert(err instanceof Error ? err.message : 'Error al procesar imagen.');
+        } finally {
+          setIsResolving(false);
+          setStatusMessage('');
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setIsResolving(false);
+      setStatusMessage('');
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.startsWith('image/')) {
+        const file = items[i].getAsFile();
+        if (file) {
+          e.preventDefault();
+          processImageFile(file);
+          return;
+        }
+      }
+    }
+  };
 
   const handleProcess = async () => {
     const parsed = parseQuickInput(text, currency, exchangeRate);
@@ -107,7 +161,10 @@ export function QuickPasteModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4">
+    <div
+      onPaste={handlePaste}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4"
+    >
       <div className="w-full max-w-2xl rounded-[40px] border border-[#1d4034] bg-[#143028] p-6 shadow-2xl">
         <div className="flex items-center justify-between pb-4">
           <div className="flex items-center gap-2">
@@ -172,18 +229,40 @@ export function QuickPasteModal({
             )}
           </div>
 
-          {onOpenCodeGenerator && (
+          <div className="flex items-center gap-2.5">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  processImageFile(e.target.files[0]);
+                }
+              }}
+              className="hidden"
+            />
             <button
               type="button"
-              onClick={() => {
-                onClose();
-                onOpenCodeGenerator();
-              }}
-              className="flex items-center gap-1 font-semibold text-[#57cc99] hover:underline cursor-pointer text-xs"
+              onClick={() => fileInputRef.current?.click()}
+              className="flex items-center gap-1 rounded-lg bg-[#143028] border border-[#57cc99]/30 px-2 py-1 text-[11px] font-semibold text-[#80ed99] hover:bg-[#57cc99] hover:text-[#0b241c] transition-all"
+              title="Sube o pega (Ctrl + V) una foto de la cotización"
             >
-              <Wand2 className="h-3.5 w-3.5" /> Generador de Códigos & Soles
+              <Camera className="h-3 w-3" /> Pegar Foto
             </button>
-          )}
+
+            {onOpenCodeGenerator && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenCodeGenerator();
+                }}
+                className="flex items-center gap-1 font-semibold text-[#57cc99] hover:underline cursor-pointer text-xs"
+              >
+                <Wand2 className="h-3.5 w-3.5" /> Generador de Códigos
+              </button>
+            )}
+          </div>
         </div>
 
         <textarea
