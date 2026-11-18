@@ -50,7 +50,11 @@ export function cleanPartNumber(raw: string): string {
   return cleaned.toUpperCase();
 }
 
-export function parseQuickInput(rawText: string): ParsedItem[] {
+export function parseQuickInput(
+  rawText: string,
+  currency: 'USD' | 'PEN' = 'USD',
+  exchangeRate: number = 3.765
+): ParsedItem[] {
   if (!rawText.trim()) return [];
 
   const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
@@ -67,16 +71,22 @@ export function parseQuickInput(rawText: string): ParsedItem[] {
       if (!isNaN(q) && q > 0) quantity = q;
     }
 
-    // 2. Cost Detection
+    // 2. Cost Detection & Currency Conversion (Soles -> Dólares)
     const costMatch = line.match(/(?:[\$€]|US\$|USD|S\/\.?|@)?\s*(\d+(?:[.,]\d{1,4}))(?:\s*(?:\/ea|\/pc|ea|c\/u))?/i);
     let cost = 0;
     if (costMatch) {
       const rawNum = costMatch[1].replace(',', '.');
-      cost = parseFloat(rawNum);
+      const parsedCost = parseFloat(rawNum);
+      if (!isNaN(parsedCost)) {
+        const isSoles = /S\/\.?\s*\d/i.test(line) || currency === 'PEN';
+        cost = isSoles && exchangeRate > 0
+          ? Number((parsedCost / exchangeRate).toFixed(4))
+          : Number(parsedCost.toFixed(4));
+      }
     }
 
     // 3. Part Number Detection
-    // Matches industrial codes: e.g. 6ES7545-5DA00-0AB0, 1756-L83E, 6SL3244-0BB12-1FA0, etc.
+    // Matches industrial codes: e.g. 6ES7545-5DA00-0AB0, 1756-L83E, CAJAALU10X10, LTCONREC12, etc.
     const tokenMatch = line.match(/([A-Z0-9]{3,}[A-Z0-9\-_./]{2,})/i);
     const rawPart = tokenMatch ? tokenMatch[1] : line.split(/[-,\t|]/)[0];
     const partNumber = cleanPartNumber(rawPart);
@@ -93,13 +103,15 @@ export function parseQuickInput(rawText: string): ParsedItem[] {
     if (tokenMatch) remainder = remainder.replace(tokenMatch[1], ' ');
     if (costMatch) remainder = remainder.replace(costMatch[0], ' ');
     
-    // Clean noise from remainder
+    // Clean noise from remainder while preserving fractional dimensions (e.g. 1/2", 3/4")
     remainder = remainder
       .replace(/---+/g, ' ')
       .replace(/\b(?:\d+)?\s*(?:pcs|pc|unid|pza|pz|ea)\b/gi, ' ')
       .replace(/[\$€]|US\$|USD|S\/\.?/gi, ' ')
       .replace(/\b(?:x|qty|cant|c\/u|\/ea|\/pc|fob)\b/gi, ' ')
+      .replace(/(\d+)\/(\d+)/g, 'TOKENFRAC$1X$2')
       .replace(/[|,\t\-_/:]+/g, ' ')
+      .replace(/TOKENFRAC(\d+)X(\d+)/g, '$1/$2')
       .replace(/\s+\d+\s*$/, '') // strip trailing numbers
       .replace(/\s+/g, ' ')
       .trim();

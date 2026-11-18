@@ -5,23 +5,33 @@ import { parseQuickInput } from '@/utils/quote-parser';
 import { RawItemInput } from '@/services/pricing-engine';
 import { batchResolveDescriptions } from '@/services/quote-actions';
 import { classifySunatTariff } from '@/utils/sunat-tariffs';
-import { Clipboard, Loader2, Sparkles, X, Globe2 } from 'lucide-react';
+import { Clipboard, Loader2, Sparkles, X, Globe2, Wand2, DollarSign, Coins } from 'lucide-react';
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
   onItemsParsed: (newItems: RawItemInput[]) => void;
+  defaultExchangeRate?: number;
+  onOpenCodeGenerator?: () => void;
 };
 
-export function QuickPasteModal({ isOpen, onClose, onItemsParsed }: Props) {
+export function QuickPasteModal({
+  isOpen,
+  onClose,
+  onItemsParsed,
+  defaultExchangeRate = 3.765,
+  onOpenCodeGenerator,
+}: Props) {
   const [text, setText] = useState('');
+  const [currency, setCurrency] = useState<'USD' | 'PEN'>('USD');
+  const [exchangeRate, setExchangeRate] = useState<number>(defaultExchangeRate);
   const [isResolving, setIsResolving] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
   if (!isOpen) return null;
 
   const handleProcess = async () => {
-    const parsed = parseQuickInput(text);
+    const parsed = parseQuickInput(text, currency, exchangeRate);
     if (parsed.length === 0) {
       onClose();
       return;
@@ -119,12 +129,73 @@ export function QuickPasteModal({ isOpen, onClose, onItemsParsed }: Props) {
           </button>
         </div>
 
+        {/* Barra de Moneda de Entrada y Asistente */}
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-[#081a14] px-4 py-2 border border-[#1d4034] text-xs">
+          <div className="flex items-center gap-3">
+            <span className="text-slate-400 font-medium">Moneda del texto pegado:</span>
+            <div className="flex rounded-xl bg-[#143028] p-0.5 border border-[#1d4034]">
+              <button
+                type="button"
+                onClick={() => setCurrency('USD')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition-all text-xs ${
+                  currency === 'USD'
+                    ? 'bg-[#57cc99] text-[#0b241c] shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <DollarSign className="h-3.5 w-3.5" /> USD ($)
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrency('PEN')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg font-bold transition-all text-xs ${
+                  currency === 'PEN'
+                    ? 'bg-[#57cc99] text-[#0b241c] shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+              >
+                <Coins className="h-3.5 w-3.5" /> Soles (PEN S/.)
+              </button>
+            </div>
+
+            {currency === 'PEN' && (
+              <div className="flex items-center gap-1.5 font-mono text-[11px]">
+                <span className="text-slate-400">T.C.:</span>
+                <input
+                  type="number"
+                  step="0.001"
+                  value={exchangeRate}
+                  onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 3.765)}
+                  className="w-16 rounded-lg border border-[#1d4034] bg-[#143028] px-2 py-0.5 font-bold text-white text-xs text-center focus:border-[#57cc99] focus:outline-none"
+                />
+              </div>
+            )}
+          </div>
+
+          {onOpenCodeGenerator && (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenCodeGenerator();
+              }}
+              className="flex items-center gap-1 font-semibold text-[#57cc99] hover:underline cursor-pointer text-xs"
+            >
+              <Wand2 className="h-3.5 w-3.5" /> Generador de Códigos & Soles
+            </button>
+          )}
+        </div>
+
         <textarea
           rows={6}
           value={text}
           disabled={isResolving}
           onChange={(e) => setText(e.target.value)}
-          placeholder={`Ejemplo:\n6ES7545-5DA00-0AB0---1pcs --- $297.3/ea\n6ES7137-6BD00-0BA0---1PCS\n1756-L83E - ControlLogix 5580 Controller 10MB - 1 - 2100.00`}
+          placeholder={
+            currency === 'PEN'
+              ? `Ejemplo en Soles (se convertirá a USD automáticamente):\nCAJAALU10X10 - CAJA DE PASO ALUMINIO PESADO 10X10X4MM - 2pcs - S/ 22.95\nCONECTOR RECTO LIQUID TIGHT 1/2" - 4pcs - 4.59`
+              : `Ejemplo en Dólares:\nCAJAALU10X10 - CAJA DE PASO ALUMINIO PESADO 10X10X4MM - 2pcs - 6.0964\n6ES7545-5DA00-0AB0---1pcs --- $297.3/ea\n1756-L83E - ControlLogix 5580 Controller 10MB - 1 - 2100.00`
+          }
           className="w-full rounded-2xl border border-[#1d4034] bg-[#081a14] p-4 font-mono text-sm text-white placeholder-emerald-100/20 focus:border-[#57cc99] focus:outline-none disabled:opacity-50"
         />
 

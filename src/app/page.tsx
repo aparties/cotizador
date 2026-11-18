@@ -21,11 +21,13 @@ import { saveQuoteToDatabase } from '@/services/quote-actions';
 import { getQuickDescription } from '@/utils/industrial-catalog';
 import { classifySunatTariff } from '@/utils/sunat-tariffs';
 import Logo from '@/components/Logo';
-import { Sparkles, History, FileSpreadsheet } from 'lucide-react';
+import { Sparkles, History, FileSpreadsheet, Wand2 } from 'lucide-react';
 import { ImportExcelModal } from '@/components/quote/ImportExcelModal';
+import { CodeGeneratorModal } from '@/components/quote/CodeGeneratorModal';
 
 export default function Home() {
   const [isPasteOpen, setIsPasteOpen] = useState(false);
+  const [isCodeGenOpen, setIsCodeGenOpen] = useState(false);
   const [isPrintOpen, setIsPrintOpen] = useState(false);
   const [isCashFlowOpen, setIsCashFlowOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -170,7 +172,16 @@ export default function Home() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setIsCodeGenOpen(true)}
+                className="flex items-center gap-1.5 rounded-full border border-[#1d4034] bg-[#143028] px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-[#57cc99] hover:text-white transition-all shadow-md"
+                title="Generar códigos SKU y convertir cotizaciones en Soles a formato Quick Paste"
+              >
+                <Wand2 className="h-4 w-4 text-[#57cc99]" /> Generador Códigos / Soles
+              </button>
+
               <button
                 type="button"
                 onClick={() => setIsImportOpen(true)}
@@ -244,6 +255,8 @@ export default function Home() {
           isOpen={isPasteOpen}
           onClose={() => setIsPasteOpen(false)}
           onItemsParsed={handleItemsParsed}
+          defaultExchangeRate={exchangeRatePen}
+          onOpenCodeGenerator={() => setIsCodeGenOpen(true)}
         />
 
         {/* Modal de Flujo de Caja SUNAT (IGV Aduanero + Percepción) */}
@@ -300,6 +313,14 @@ export default function Home() {
       <ImportExcelModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
+      />
+
+      {/* Herramienta Asistente: Generador de Códigos SKU y Conversor Soles -> Dólares */}
+      <CodeGeneratorModal
+        isOpen={isCodeGenOpen}
+        onClose={() => setIsCodeGenOpen(false)}
+        defaultExchangeRate={exchangeRatePen}
+        onImportToQuote={handleItemsParsed}
       />
     </div>
   );
