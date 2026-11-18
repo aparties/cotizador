@@ -5,6 +5,7 @@ export interface GeneratedCodeItem {
   description: string;
   quantity: number;
   originalPrice: number;
+  priceWithoutIgv: number;
   convertedPriceUsd: number;
   formattedLine: string;
 }
@@ -131,7 +132,8 @@ export function generatePartCode(description: string, existingCode?: string): st
 export function processRawQuoteToQuickPaste(
   rawText: string,
   currency: 'PEN' | 'USD',
-  exchangeRate: number
+  exchangeRate: number,
+  deductIgv: boolean = true
 ): GeneratedCodeItem[] {
   if (!rawText.trim()) return [];
 
@@ -223,13 +225,17 @@ export function processRawQuoteToQuickPaste(
       }
     }
 
+    // Descontar IGV 18% si deductIgv está activo (dividir entre 1.18 para obtener el costo neto contable)
+    const basePriceNet = deductIgv && originalPrice > 0 ? originalPrice / 1.18 : originalPrice;
+    const priceWithoutIgv = Number(basePriceNet.toFixed(4));
+
     // Check if line explicitly specifies S/ or USD regardless of global setting
     const lineIsSoles = /S\/\.?\s*\d/i.test(line) || currency === 'PEN';
     const convertedPriceUsd = lineIsSoles
       ? exchangeRate > 0
-        ? Number((originalPrice / exchangeRate).toFixed(4))
-        : originalPrice
-      : Number(originalPrice.toFixed(4));
+        ? Number((basePriceNet / exchangeRate).toFixed(4))
+        : basePriceNet
+      : Number(basePriceNet.toFixed(4));
 
     // Clean description of noise
     description = description
@@ -266,6 +272,7 @@ export function processRawQuoteToQuickPaste(
       description: description.toUpperCase(),
       quantity,
       originalPrice,
+      priceWithoutIgv,
       convertedPriceUsd,
       formattedLine,
     });

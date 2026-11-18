@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { CalculatedItem, RawItemInput, MARGIN_PROFILES, CalculationOrigin } from '@/services/pricing-engine';
-import { Trash2, Plus, Check } from 'lucide-react';
+import { Trash2, Plus, Check, Percent } from 'lucide-react';
 import { ProductAutocomplete } from './ProductAutocomplete';
 import { classifySunatTariff } from '@/utils/sunat-tariffs';
 
@@ -13,6 +13,7 @@ type Props = {
   onDeleteItem: (id: string) => void;
   onAddItem: () => void;
   onApplyBulkMargin: (marginPct: number) => void;
+  onDeductIgvFromCosts?: () => void;
   origin?: CalculationOrigin;
   exchangeRatePen?: number;
   costCurrency?: 'USD' | 'PEN';
@@ -26,6 +27,7 @@ export function QuoteItemsTable({
   onDeleteItem,
   onAddItem,
   onApplyBulkMargin,
+  onDeductIgvFromCosts,
   origin = 'IMPORTACION',
   exchangeRatePen = 3.765,
   costCurrency = 'USD',
@@ -98,13 +100,26 @@ export function QuoteItemsTable({
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={onAddItem}
-          className="flex items-center gap-1.5 rounded-full bg-[#081a14] border border-[#1d4034] px-4 py-2 text-xs font-bold text-[#57cc99] hover:bg-[#57cc99]/20"
-        >
-          <Plus className="h-4 w-4" /> Agregar Fila
-        </button>
+        <div className="flex items-center gap-2.5">
+          {onDeductIgvFromCosts && (
+            <button
+              type="button"
+              onClick={onDeductIgvFromCosts}
+              className="flex items-center gap-1.5 rounded-full bg-[#081a14] border border-amber-500/40 px-3.5 py-2 text-xs font-bold text-amber-300 hover:bg-amber-500/20 hover:text-white transition-all shadow-sm"
+              title="Divide los costos actuales entre 1.18 para descontar el IGV de compra y calcular el margen sobre el costo neto real"
+            >
+              <Percent className="h-3.5 w-3.5 text-amber-400" /> Descontar IGV 18% (÷ 1.18)
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={onAddItem}
+            className="flex items-center gap-1.5 rounded-full bg-[#081a14] border border-[#1d4034] px-4 py-2 text-xs font-bold text-[#57cc99] hover:bg-[#57cc99]/20"
+          >
+            <Plus className="h-4 w-4" /> Agregar Fila
+          </button>
+        </div>
       </div>
 
       <div className="overflow-x-auto">

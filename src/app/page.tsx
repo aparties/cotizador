@@ -179,6 +179,23 @@ export default function Home() {
     setRawItems((prev) => prev.map((it) => ({ ...it, marginRatePct: marginPct })));
   };
 
+  const handleDeductIgvFromCosts = () => {
+    setRawItems((prev) =>
+      prev.map((it) => {
+        const newUsd = Number((it.baseUnitCostUsd / 1.18).toFixed(4));
+        const newPen =
+          it.baseUnitCostPen !== undefined
+            ? Number((it.baseUnitCostPen / 1.18).toFixed(2))
+            : Number((newUsd * exchangeRatePen).toFixed(2));
+        return {
+          ...it,
+          baseUnitCostUsd: newUsd,
+          baseUnitCostPen: newPen,
+        };
+      })
+    );
+  };
+
   const handleItemsParsed = (newItems: RawItemInput[]) => {
     // Si la cotización sólo tenía los 2 ítems de demostración iniciales (item-1 e item-2),
     // los reemplazamos por los ítems reales importados para empezar limpios
@@ -302,6 +319,7 @@ export default function Home() {
             onDeleteItem={handleDeleteItem}
             onAddItem={handleAddItem}
             onApplyBulkMargin={handleApplyBulkMargin}
+            onDeductIgvFromCosts={handleDeductIgvFromCosts}
             origin={origin}
             exchangeRatePen={exchangeRatePen}
             costCurrency={costCurrency}

@@ -44,6 +44,7 @@ export const CodeGeneratorModal: React.FC<Props> = ({
   const [inputText, setInputText] = useState('');
   const [currency, setCurrency] = useState<'PEN' | 'USD'>('PEN');
   const [exchangeRate, setExchangeRate] = useState<number>(defaultExchangeRate);
+  const [deductIgv, setDeductIgv] = useState<boolean>(true);
   const [copied, setCopied] = useState(false);
 
   // Estados de Imagen y Gemini Vision
@@ -56,8 +57,8 @@ export const CodeGeneratorModal: React.FC<Props> = ({
 
   // Proceso reactivo en tiempo real
   const generatedItems: GeneratedCodeItem[] = useMemo(() => {
-    return processRawQuoteToQuickPaste(inputText, currency, exchangeRate || 3.765);
-  }, [inputText, currency, exchangeRate]);
+    return processRawQuoteToQuickPaste(inputText, currency, exchangeRate || 3.765, deductIgv);
+  }, [inputText, currency, exchangeRate, deductIgv]);
 
   const outputFormattedText = useMemo(() => {
     return generatedItems.map((it) => it.formattedLine).join('\n');
@@ -77,13 +78,14 @@ export const CodeGeneratorModal: React.FC<Props> = ({
 
     const formatted: RawItemInput[] = generatedItems.map((g) => {
       const tariff = classifySunatTariff(g.code, g.description);
+      const baseCostPen = currency === 'PEN' ? g.priceWithoutIgv : Number((g.convertedPriceUsd * (exchangeRate || 3.765)).toFixed(2));
       return {
         id: crypto.randomUUID(),
         partNumber: g.code,
         description: g.description,
         quantity: g.quantity,
         baseUnitCostUsd: g.convertedPriceUsd,
-        baseUnitCostPen: currency === 'PEN' ? g.originalPrice : Number((g.convertedPriceUsd * (exchangeRate || 3.765)).toFixed(2)),
+        baseUnitCostPen: Number(baseCostPen.toFixed(2)),
         currencyCost: currency,
         adValoremRate: tariff.adValoremRate,
         hsCode: tariff.hsCode,
@@ -247,6 +249,29 @@ export const CodeGeneratorModal: React.FC<Props> = ({
                 </div>
               </div>
             )}
+
+            {/* Selector de IGV de compra */}
+            <div className="flex items-center gap-2">
+              <span className="text-slate-400 font-medium">IGV compra:</span>
+              <button
+                type="button"
+                onClick={() => setDeductIgv(!deductIgv)}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-xl font-bold transition-all border ${
+                  deductIgv
+                    ? 'bg-[#57cc99] text-[#0b241c] border-[#57cc99] shadow-sm'
+                    : 'bg-[#081a14] text-slate-400 border-[#1d4034] hover:text-white'
+                }`}
+                title="Si el precio cotizado por el proveedor incluye IGV (18%), se divide entre 1.18 para calcular el costo base neto real"
+              >
+                {deductIgv ? (
+                  <>
+                    <Check className="h-3.5 w-3.5" /> Descontar 18% IGV (÷ 1.18)
+                  </>
+                ) : (
+                  <>Precios Netos (Sin IGV)</>
+                )}
+              </button>
+            </div>
           </div>
 
           <div className="flex items-center gap-3">
@@ -399,15 +424,30 @@ export const CodeGeneratorModal: React.FC<Props> = ({
               <div className="rounded-xl bg-[#143028]/80 border border-[#1d4034] p-2.5 text-[11px] text-slate-300 space-y-1">
                 <div className="flex justify-between text-slate-400 text-[10px]">
                   <span>RESUMEN CONVERSIÓN:</span>
-                  <span>{currency === 'PEN' ? `T.C. S/ ${exchangeRate}` : 'Precios en USD'}</span>
+                  <span>
+                    {currency === 'PEN' ? `T.C. S/ ${exchangeRate}` : 'Precios en USD'}
+                    {deductIgv ? ' • IGV 18% descontado (÷ 1.18)' : ' • Precios netos'}
+                  </span>
                 </div>
                 <div className="flex justify-between font-mono font-bold">
                   <span className="text-white">{generatedItems.length} Partidas generadas</span>
-                  {currency === 'PEN' && (
-                    <span className="text-[#57cc99]">
-                      Total: S/ {generatedItems.reduce((acc, it) => acc + (it.originalPrice * it.quantity), 0).toFixed(2)} ➔ US$ {generatedItems.reduce((acc, it) => acc + (it.convertedPriceUsd * it.quantity), 0).toFixed(2)}
-                    </span>
-                  )}
+                  <span className="text-[#57cc99]">
+                    {currency === 'PEN' ? (
+                      deductIgv ? (
+                        <>
+                          Con IGV: S/ {generatedItems.reduce((acc, it) => acc + (it.originalPrice * it.quantity), 0).toFixed(2)} ➔ Base: S/ {generatedItems.reduce((acc, it) => acc + (it.priceWithoutIgv * it.quantity), 0).toFixed(2)} (US$ {generatedItems.reduce((acc, it) => acc + (it.convertedPriceUsd * it.quantity), 0).toFixed(2)})
+                        </>
+                      ) : (
+                        <>
+                          Total: S/ {generatedItems.reduce((acc, it) => acc + (it.originalPrice * it.quantity), 0).toFixed(2)} ➔ US$ {generatedItems.reduce((acc, it) => acc + (it.convertedPriceUsd * it.quantity), 0).toFixed(2)}
+                        </>
+                      )
+                    ) : (
+                      <>
+                        Total USD: ${generatedItems.reduce((acc, it) => acc + (it.convertedPriceUsd * it.quantity), 0).toFixed(2)}
+                      </>
+                    )}
+                  </span>
                 </div>
               </div>
             )}
