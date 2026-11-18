@@ -191,11 +191,11 @@ export function processRawQuoteToQuickPaste(
         if (!isNaN(q) && q > 0) quantity = q;
       }
 
-      // 2. Extract Price
+      // 2. Extract Price (admite enteros como 40, 310, 8 y decimales como 40.00, 6.0964)
       const priceMatch =
-        line.match(/(?:[\$€]|US\$|USD|S\/\.?|S\/)\s*(\d+(?:[.,]\d{1,4}))/i) ||
-        line.match(/[-|\t,;]\s*(\d+(?:[.,]\d{1,4}))\s*$/) ||
-        line.match(/\b(\d+[.,]\d{2,4})\b/);
+        line.match(/(?:[\$€]|US\$|USD|S\/\.?|S\/)\s*(\d+(?:[.,]\d+)?)/i) ||
+        line.match(/[-|\t,;:]\s*(\d+(?:[.,]\d+)?)\s*$/) ||
+        line.match(/\b(\d+[.,]\d+)\b/);
       if (priceMatch) {
         const numStr = priceMatch[1].replace(',', '.');
         const val = parseFloat(numStr);
@@ -238,6 +238,12 @@ export function processRawQuoteToQuickPaste(
       .replace(/[-|;]+/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
+
+    // If description starts with extractedCode, strip it to prevent duplicate (ej. XCKJ... - XCKJ...)
+    if (extractedCode) {
+      const esc = extractedCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      description = description.replace(new RegExp(`^${esc}\\s*[-:]*\\s*`, 'i'), '').trim();
+    }
 
     // Generate or refine Code
     const code = generatePartCode(description, extractedCode);

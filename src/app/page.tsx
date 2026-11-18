@@ -180,7 +180,12 @@ export default function Home() {
   };
 
   const handleItemsParsed = (newItems: RawItemInput[]) => {
-    setRawItems((prev) => [...prev, ...newItems]);
+    // Si la cotización sólo tenía los 2 ítems de demostración iniciales (item-1 e item-2),
+    // los reemplazamos por los ítems reales importados para empezar limpios
+    setRawItems((prev) => {
+      const isInitialDemo = prev.length === 2 && prev[0].id === 'item-1' && prev[1].id === 'item-2';
+      return isInitialDemo ? newItems : [...prev, ...newItems];
+    });
   };
 
   const handleSaveQuote = async () => {

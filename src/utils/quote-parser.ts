@@ -71,8 +71,11 @@ export function parseQuickInput(
       if (!isNaN(q) && q > 0) quantity = q;
     }
 
-    // 2. Cost Detection & Currency Conversion (Soles -> Dólares)
-    const costMatch = line.match(/(?:[\$€]|US\$|USD|S\/\.?|@)?\s*(\d+(?:[.,]\d{1,4}))(?:\s*(?:\/ea|\/pc|ea|c\/u))?/i);
+    // 2. Cost Detection & Currency Conversion (Soles -> Dólares, admite enteros y decimales)
+    const costMatch =
+      line.match(/(?:[\$€]|US\$|USD|S\/\.?|@)\s*(\d+(?:[.,]\d+)?)(?:\s*(?:\/ea|\/pc|ea|c\/u))?/i) ||
+      line.match(/[-|\t,;:]\s*(\d+(?:[.,]\d+)?)\s*$/) ||
+      line.match(/\b(\d+[.,]\d+)\b/);
     let cost = 0;
     if (costMatch) {
       const rawNum = costMatch[1].replace(',', '.');

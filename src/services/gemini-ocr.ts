@@ -160,12 +160,19 @@ Responde ÚNICAMENTE con un objeto JSON válido con esta estructura:
                 ? Number((originalPrice / rate).toFixed(4))
                 : Number(originalPrice.toFixed(4));
 
-              const formattedLine = `${code} - ${desc} - ${quantity}pcs - ${priceUsd}`;
-              const rawLine = `${code} - ${desc} - ${quantity}pcs - ${originalPrice}`;
+              // Evitar duplicar el código si ya está al inicio de la descripción
+              let cleanDesc = desc;
+              if (code) {
+                const esc = code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                cleanDesc = cleanDesc.replace(new RegExp(`^${esc}\\s*[-:]*\\s*`, 'i'), '').trim();
+              }
+
+              const formattedLine = `${code} - ${cleanDesc} - ${quantity}pcs - ${priceUsd}`;
+              const rawLine = `${code} - ${cleanDesc} - ${quantity}pcs - ${originalPrice}`;
 
               return {
                 code,
-                description: desc,
+                description: cleanDesc,
                 quantity,
                 originalPrice,
                 detectedCurrency: detectedCurr,
