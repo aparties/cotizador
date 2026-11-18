@@ -1,5 +1,7 @@
 'use server';
 
+import { generatePartCode } from '@/utils/code-generator';
+
 export interface ExtractedImageItem {
   code: string;
   description: string;
@@ -7,14 +9,17 @@ export interface ExtractedImageItem {
   originalPrice: number;
   detectedCurrency: 'PEN' | 'USD';
   priceUsd: number;
+  rawLine: string;
   formattedLine: string;
 }
 
 export interface ImageExtractionResult {
   success: boolean;
   items: ExtractedImageItem[];
+  detectedCurrency?: 'PEN' | 'USD';
   rawTextExtracted?: string;
   formattedText?: string;
+  rawFormattedText?: string;
   error?: string;
 }
 
@@ -42,43 +47,40 @@ export async function extractQuoteFromImage(
 
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout for vision
+    const timeout = setTimeout(() => controller.abort(), 25000); // 25s timeout for vision
 
-    const prompt = `Eres un ingeniero especialista en cotizaciones industriales, repuestos y extracción de datos en Perú.
-Analiza cuidadosamente esta imagen (puede ser una cotización de proveedor, lista de WhatsApp, factura, proforma o captura de pantalla) y extrae TODOS los repuestos, productos o materiales listados.
+    const prompt = `Analiza detalladamente esta imagen de cotización, lista de precios o proforma industrial.
+Extrae TODOS los repuestos, productos, materiales o ítems listados en la tabla con sus datos literales EXACTOS sin alterar los números:
 
-Parámetros:
-- Tipo de Cambio (T.C.): S/ ${exchangeRate} por cada 1 USD.
-- Moneda sugerida por usuario: ${currency}.
+Para cada ítem extrae:
+- "description": Descripción técnica completa del producto en MAYÚSCULAS (omite el número de ítem inicial y guiones de viñeta).
+- "partNumber": Si el producto tiene un número de parte o código de fabricante explícito (ej. XCKJ10541H29C, 6ES7..., 1756...), extráelo. Si no tiene código explícito, déjalo como string vacío "".
+- "unit": Unidad de medida (ej. UN, RLL, MTR, PCS, PZ).
+- "quantity": Cantidad numérica entera o decimal (ej. 2, 1, 4...).
+- "unitPrice": El número EXACTO que aparece escrito en la columna PRECIO unitario, tal cual, sin hacer ningún cálculo matemático ni división (ej. 40.00, 310.00, 8.00, 150.00). Si no tiene precio visible, pon 0.
+- "totalPrice": El número EXACTO en la columna TOTAL sin hacer ningún cálculo (ej. 80.00, 310.00, 32.00...).
 
-Para CADA ítem encontrado en la imagen extrae:
-1. "code": Si la imagen tiene un número de parte o código de fabricante (ej. XCKJ10541H29C, 6ES7..., 1756...), úsalo. Si no tiene código explícito, genera un código mnemotécnico corto en mayúsculas sin espacios (ej. CAJAALU10X10, LTCONREC12, LTCONCUR12, CABGPT18).
-2. "description": La descripción técnica del repuesto en MAYÚSCULAS.
-3. "quantity": Cantidad numérica entera. Si no se indica, asume 1.
-4. "originalPrice": El precio unitario numérico tal cual aparece en la imagen. Si no tiene precio, pon 0.
-5. "detectedCurrency": "PEN" (si está en Soles / S/) o "USD" (si está en Dólares / $).
-6. "priceUsd": El precio unitario final en DÓLARES (USD). Si la moneda detectada o indicada es Soles (PEN), divide el precio original entre ${exchangeRate} y redondea a 4 decimales (ej. 22.95 / 3.765 = 6.0964). Si ya está en dólares, conserva el valor.
-7. "formattedLine": La línea con el formato EXACTO:
-   "<code > - <description> - <quantity>pcs - <priceUsd>"
+Detección de Moneda:
+- "detectedCurrency": Si en el encabezado o tabla de la imagen se observa "S/", "SOLES" o "S/." pon "PEN". Si se observa "$", "USD" o "DOLARES" pon "USD". Si no hay símbolo explícito de moneda en la tabla, pon "UNKNOWN".
 
-Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura:
+Responde ÚNICAMENTE con un objeto JSON válido con esta estructura:
 {
+  "detectedCurrency": "PEN" | "USD" | "UNKNOWN",
   "items": [
     {
-      "code": "CAJAALU10X10",
       "description": "CAJA DE PASO ALUMINIO PESADO 10X10X4MM",
+      "partNumber": "",
+      "unit": "UN",
       "quantity": 2,
-      "originalPrice": 22.9529,
-      "detectedCurrency": "PEN",
-      "priceUsd": 6.0964,
-      "formattedLine": "CAJAALU10X10 - CAJA DE PASO ALUMINIO PESADO 10X10X4MM - 2pcs - 6.0964"
+      "unitPrice": 40.00,
+      "totalPrice": 80.00
     }
   ],
-  "rawTextExtracted": "Texto legible que lograste leer de la imagen..."
+  "rawTextExtracted": "Resumen del texto visible..."
 }`;
 
-    // Use fast vision models with fallback
-    const models = ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest'];
+    // Available Gemini Vision models
+    const models = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'];
     let lastError = '';
 
     for (const model of models) {
@@ -104,7 +106,7 @@ Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura:
               ],
               generationConfig: {
                 responseMimeType: 'application/json',
-                temperature: 0.1,
+                temperature: 0.0,
               },
             }),
             signal: controller.signal,
@@ -116,14 +118,73 @@ Responde ÚNICAMENTE con un objeto JSON válido con la siguiente estructura:
           const data = await res.json();
           const jsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
           if (jsonText) {
+            interface RawVisionItem {
+              description?: string;
+              partNumber?: string;
+              unit?: string;
+              quantity?: number | string;
+              unitPrice?: number | string;
+              totalPrice?: number | string;
+            }
+
             const parsed = JSON.parse(jsonText);
-            const items: ExtractedImageItem[] = parsed.items || [];
+            const rawList: RawVisionItem[] = parsed.items || [];
+
+            const detectedCurr: 'PEN' | 'USD' =
+              parsed.detectedCurrency === 'USD'
+                ? 'USD'
+                : parsed.detectedCurrency === 'PEN'
+                ? 'PEN'
+                : currency;
+
+            const isSoles = detectedCurr === 'PEN';
+            const rate = exchangeRate > 0 ? exchangeRate : 3.765;
+
+            const items: ExtractedImageItem[] = rawList.map((rawIt) => {
+              const desc = String(rawIt.description || '').trim();
+              const explicitCode = String(rawIt.partNumber || '').trim();
+              const code = generatePartCode(desc, explicitCode);
+
+              const quantity =
+                typeof rawIt.quantity === 'number'
+                  ? rawIt.quantity
+                  : parseFloat(String(rawIt.quantity)) || 1;
+
+              const originalPrice =
+                typeof rawIt.unitPrice === 'number'
+                  ? rawIt.unitPrice
+                  : parseFloat(String(rawIt.unitPrice).replace(/[^0-9.]/g, '')) || 0;
+
+              // Strictly deterministic math in TypeScript
+              const priceUsd = isSoles
+                ? Number((originalPrice / rate).toFixed(4))
+                : Number(originalPrice.toFixed(4));
+
+              const formattedLine = `${code} - ${desc} - ${quantity}pcs - ${priceUsd}`;
+              const rawLine = `${code} - ${desc} - ${quantity}pcs - ${originalPrice}`;
+
+              return {
+                code,
+                description: desc,
+                quantity,
+                originalPrice,
+                detectedCurrency: detectedCurr,
+                priceUsd,
+                rawLine,
+                formattedLine,
+              };
+            });
+
             const formattedText = items.map((it) => it.formattedLine).join('\n');
+            const rawFormattedText = items.map((it) => it.rawLine).join('\n');
+
             return {
               success: true,
               items,
+              detectedCurrency: detectedCurr,
               rawTextExtracted: parsed.rawTextExtracted || '',
               formattedText,
+              rawFormattedText,
             };
           }
         } else {

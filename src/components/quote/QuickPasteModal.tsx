@@ -49,6 +49,9 @@ export function QuickPasteModal({
           );
 
           if (res.success && res.items.length > 0) {
+            // Como formattedLine ya está calculado en USD con el T.C. seleccionado,
+            // fijamos la moneda a USD para evitar una doble conversión accidental en parseQuickInput
+            setCurrency('USD');
             const lines = res.items.map((it) => it.formattedLine).join('\n');
             setText((prev) => (prev.trim() ? `${prev.trim()}\n${lines}` : lines));
           } else {

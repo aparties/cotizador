@@ -114,9 +114,12 @@ export const CodeGeneratorModal: React.FC<Props> = ({
           const res = await extractQuoteFromImage(dataUrl, file.type, currency, exchangeRate || 3.765);
 
           if (res.success && res.items.length > 0) {
-            // Actualizar el texto de entrada con el texto formateado
-            const newText = res.items.map((it) => it.formattedLine).join('\n');
-            setInputText(newText);
+            if (res.detectedCurrency && (res.detectedCurrency === 'PEN' || res.detectedCurrency === 'USD')) {
+              setCurrency(res.detectedCurrency);
+            }
+            // Poblar el texto de entrada con los precios originales literales del documento
+            const rawText = res.rawFormattedText || res.items.map((it) => it.rawLine).join('\n');
+            setInputText(rawText);
           } else {
             setImageError(res.error || 'No se pudieron detectar ítems en la imagen. Intenta con una foto más nítida.');
           }

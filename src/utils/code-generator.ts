@@ -33,8 +33,14 @@ export function generatePartCode(description: string, existingCode?: string): st
   }
 
   // 2. Specific industrial hardware patterns
-  // Liquid Tight Connectors (e.g. CONECTOR RECTO LIQUID TIGHT 1/2")
-  if (desc.includes('LIQUID TIGHT') || desc.includes('LIQUIDTIGHT') || desc.includes('LT ')) {
+  // Liquid Tight Connectors (e.g. CONECTOR RECTO LIQUID TIGHT 1/2" or vendor typo LIQUIT THIGH)
+  if (
+    desc.includes('LIQUID TIGHT') ||
+    desc.includes('LIQUIDTIGHT') ||
+    desc.includes('LIQUIT') ||
+    desc.includes('THIGH') ||
+    desc.includes('LT ')
+  ) {
     let type = 'CON';
     if (desc.includes('RECTO') || desc.includes('REC')) type = 'CONREC';
     else if (desc.includes('CURVO') || desc.includes('CUR')) type = 'CONCUR';
